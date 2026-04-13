@@ -208,6 +208,156 @@ CREATE TABLE customer_segment_members (
     PRIMARY KEY (segment_id, customer_id)
 );
 
+-- ============================================================
+-- Documentation (table and column descriptions)
+-- ============================================================
+
+-- ACC
+COMMENT ON TABLE customers IS 'Покупатели интернет-магазина: базовый профиль клиента, контактные данные и статус верификации.';
+COMMENT ON COLUMN customers.id IS 'Уникальный идентификатор покупателя (PK). Используется как ссылка во всех связанных таблицах.';
+COMMENT ON COLUMN customers.name IS 'Имя и фамилия покупателя, отображается в личном кабинете, заказах и поддержке.';
+COMMENT ON COLUMN customers.email IS 'Основной email покупателя. Уникален, используется для входа, уведомлений и чеков.';
+COMMENT ON COLUMN customers.phone IS 'Контактный телефон для доставки, подтверждений и связи службы поддержки.';
+COMMENT ON COLUMN customers.password_hash IS 'Хеш пароля (никогда не хранить пароль в открытом виде). Может быть NULL для внешней авторизации.';
+COMMENT ON COLUMN customers.is_verified IS 'Признак подтверждения аккаунта (email/телефон). TRUE — профиль подтвержден.';
+COMMENT ON COLUMN customers.created_at IS 'Дата и время регистрации покупателя.';
+
+COMMENT ON TABLE addresses IS 'Адреса доставки покупателей. Один покупатель может иметь несколько адресов (дом, офис и т.д.).';
+COMMENT ON COLUMN addresses.id IS 'Уникальный идентификатор адреса (PK).';
+COMMENT ON COLUMN addresses.customer_id IS 'Ссылка на владельца адреса (customers.id). При удалении клиента адрес удаляется каскадно.';
+COMMENT ON COLUMN addresses.label IS 'Пользовательская метка адреса: например, "Дом", "Офис", "Склад".';
+COMMENT ON COLUMN addresses.city IS 'Город доставки.';
+COMMENT ON COLUMN addresses.street IS 'Улица доставки.';
+COMMENT ON COLUMN addresses.building IS 'Номер дома/корпуса.';
+COMMENT ON COLUMN addresses.apartment IS 'Квартира/офис/помещение. Может быть NULL.';
+COMMENT ON COLUMN addresses.postal_code IS 'Почтовый индекс адреса.';
+COMMENT ON COLUMN addresses.country_code IS 'Код страны в формате ISO 3166-1 alpha-2 (например, RU, US, NL).';
+COMMENT ON COLUMN addresses.is_default IS 'Признак адреса по умолчанию для покупателя.';
+COMMENT ON COLUMN addresses.created_at IS 'Дата и время добавления адреса.';
+
+-- CAT
+COMMENT ON TABLE categories IS 'Категории каталога товаров. Поддерживается иерархия через parent_id.';
+COMMENT ON COLUMN categories.id IS 'Уникальный идентификатор категории (PK).';
+COMMENT ON COLUMN categories.name IS 'Название категории, отображаемое в каталоге и фильтрах.';
+COMMENT ON COLUMN categories.parent_id IS 'Ссылка на родительскую категорию (self-reference). NULL означает корневую категорию.';
+COMMENT ON COLUMN categories.sort_order IS 'Порядок сортировки категории в меню/каталоге (меньше — выше).';
+COMMENT ON COLUMN categories.is_active IS 'Признак активности категории. Неактивные категории можно скрывать на витрине.';
+
+COMMENT ON TABLE products IS 'Каталог товаров магазина: чай, книги и другие позиции, доступные к продаже.';
+COMMENT ON COLUMN products.id IS 'Уникальный идентификатор товара (PK).';
+COMMENT ON COLUMN products.sku IS 'Уникальный артикул товара (Stock Keeping Unit), используется в операционном учете.';
+COMMENT ON COLUMN products.name IS 'Название товара, отображаемое на витрине и в заказах.';
+COMMENT ON COLUMN products.description IS 'Подробное текстовое описание товара: состав, характеристики, особенности.';
+COMMENT ON COLUMN products.price IS 'Базовая цена товара в валюте магазина. Не может быть отрицательной.';
+COMMENT ON COLUMN products.category_id IS 'Ссылка на категорию товара (categories.id).';
+COMMENT ON COLUMN products.brand IS 'Бренд/издательство/производитель товара.';
+COMMENT ON COLUMN products.image_url IS 'URL основного изображения товара для витрины.';
+COMMENT ON COLUMN products.is_active IS 'Признак доступности товара на витрине. FALSE — товар скрыт от покупки.';
+COMMENT ON COLUMN products.created_at IS 'Дата и время создания карточки товара.';
+COMMENT ON COLUMN products.updated_at IS 'Дата и время последнего обновления карточки товара.';
+
+-- INV
+COMMENT ON TABLE warehouses IS 'Склады хранения товаров. Нужны для учета остатков и логистики.';
+COMMENT ON COLUMN warehouses.id IS 'Уникальный идентификатор склада (PK).';
+COMMENT ON COLUMN warehouses.name IS 'Человеко-читаемое название склада.';
+COMMENT ON COLUMN warehouses.location IS 'Адрес/описание расположения склада.';
+
+COMMENT ON TABLE inventory IS 'Остатки товаров по складам (складской учет).';
+COMMENT ON COLUMN inventory.id IS 'Уникальный идентификатор записи остатка (PK).';
+COMMENT ON COLUMN inventory.product_id IS 'Ссылка на товар (products.id).';
+COMMENT ON COLUMN inventory.warehouse_id IS 'Ссылка на склад (warehouses.id).';
+COMMENT ON COLUMN inventory.quantity IS 'Текущее доступное количество товара на складе.';
+COMMENT ON COLUMN inventory.min_level IS 'Минимальный рекомендуемый уровень остатка для сигнала на пополнение.';
+COMMENT ON COLUMN inventory.updated_at IS 'Дата и время последнего обновления остатка.';
+
+-- CRT
+COMMENT ON TABLE carts IS 'Корзины покупок. Могут быть привязаны к авторизованному пользователю или гостевой сессии.';
+COMMENT ON COLUMN carts.id IS 'Уникальный идентификатор корзины (PK).';
+COMMENT ON COLUMN carts.customer_id IS 'Ссылка на покупателя (customers.id). NULL для гостевой корзины.';
+COMMENT ON COLUMN carts.session_id IS 'Идентификатор гостевой сессии/браузера для неавторизованных корзин.';
+COMMENT ON COLUMN carts.created_at IS 'Дата и время создания корзины.';
+COMMENT ON COLUMN carts.updated_at IS 'Дата и время последнего изменения корзины.';
+
+COMMENT ON TABLE cart_items IS 'Позиции в корзине: какой товар и в каком количестве добавлен.';
+COMMENT ON COLUMN cart_items.id IS 'Уникальный идентификатор позиции корзины (PK).';
+COMMENT ON COLUMN cart_items.cart_id IS 'Ссылка на корзину (carts.id). При удалении корзины позиции удаляются каскадно.';
+COMMENT ON COLUMN cart_items.product_id IS 'Ссылка на товар (products.id), добавленный в корзину.';
+COMMENT ON COLUMN cart_items.quantity IS 'Количество единиц товара в данной позиции корзины.';
+
+-- ORD / CHK
+COMMENT ON TABLE orders IS 'Заказы покупателей: шапка заказа со статусом, источником, метаинформацией и признаком оплаты.';
+COMMENT ON COLUMN orders.order_id IS 'Бизнес-идентификатор заказа (PK), читаемый номер в формате ORD-...';
+COMMENT ON COLUMN orders.customer_id IS 'Ссылка на покупателя, оформившего заказ (customers.id).';
+COMMENT ON COLUMN orders.status IS 'Текущий статус жизненного цикла заказа (created/paid/processing/shipped/delivered/cancelled).';
+COMMENT ON COLUMN orders.is_paid IS 'Признак оплаты заказа. TRUE, если заказ оплачен полностью.';
+COMMENT ON COLUMN orders.comment IS 'Комментарий к заказу от клиента/оператора (особые пожелания, уточнения).';
+COMMENT ON COLUMN orders.source IS 'Канал оформления заказа: web, mobile и т.д.';
+COMMENT ON COLUMN orders.ip IS 'IP-адрес клиента в момент оформления заказа (для аналитики/антифрода).';
+COMMENT ON COLUMN orders.tags IS 'Набор тегов заказа для сегментации и аналитики.';
+COMMENT ON COLUMN orders.created_at IS 'Дата и время создания заказа.';
+COMMENT ON COLUMN orders.updated_at IS 'Дата и время последнего обновления заказа.';
+
+COMMENT ON TABLE order_items IS 'Позиции заказа (snapshot): фиксируют товар, имя и цену на момент покупки.';
+COMMENT ON COLUMN order_items.id IS 'Уникальный идентификатор позиции заказа (PK).';
+COMMENT ON COLUMN order_items.order_id IS 'Ссылка на заказ (orders.order_id).';
+COMMENT ON COLUMN order_items.product_id IS 'Артикул/идентификатор товарной позиции на момент заказа (хранится как строка).';
+COMMENT ON COLUMN order_items.name IS 'Название товара на момент покупки (исторический снимок, не зависит от текущего названия в каталоге).';
+COMMENT ON COLUMN order_items.quantity IS 'Количество единиц товара в заказе.';
+COMMENT ON COLUMN order_items.price IS 'Цена за единицу товара на момент оформления заказа.';
+COMMENT ON COLUMN order_items.in_stock IS 'Флаг наличия товара в момент обработки/комплектации позиции.';
+
+COMMENT ON TABLE payments IS 'Платежные операции по заказам.';
+COMMENT ON COLUMN payments.id IS 'Уникальный идентификатор платежа (PK).';
+COMMENT ON COLUMN payments.order_id IS 'Ссылка на заказ, к которому относится платеж (orders.order_id).';
+COMMENT ON COLUMN payments.method IS 'Метод оплаты: card, cash, sbp, wallet.';
+COMMENT ON COLUMN payments.total IS 'Итоговая сумма платежа.';
+COMMENT ON COLUMN payments.currency IS 'Валюта платежа в формате ISO 4217 (например, RUB, USD).';
+COMMENT ON COLUMN payments.paid_at IS 'Дата и время подтверждения оплаты. NULL, если платеж не завершен.';
+
+COMMENT ON TABLE order_status_history IS 'История переходов статусов заказа (audit trail процесса исполнения).';
+COMMENT ON COLUMN order_status_history.id IS 'Уникальный идентификатор записи истории (PK).';
+COMMENT ON COLUMN order_status_history.order_id IS 'Ссылка на заказ (orders.order_id), статус которого изменился.';
+COMMENT ON COLUMN order_status_history.status IS 'Новый статус заказа, установленный в момент записи.';
+COMMENT ON COLUMN order_status_history.changed_at IS 'Дата и время смены статуса.';
+COMMENT ON COLUMN order_status_history.changed_by IS 'Источник изменения: system, оператор, интеграция и т.д.';
+COMMENT ON COLUMN order_status_history.comment IS 'Служебный комментарий к смене статуса.';
+
+-- MKT
+COMMENT ON TABLE promotions IS 'Маркетинговые акции и промокоды (скидки, фиксированная скидка, бесплатная доставка).';
+COMMENT ON COLUMN promotions.id IS 'Уникальный идентификатор акции (PK).';
+COMMENT ON COLUMN promotions.code IS 'Уникальный промокод, который вводит пользователь при оформлении.';
+COMMENT ON COLUMN promotions.type IS 'Тип акции: percentage, fixed, free_shipping.';
+COMMENT ON COLUMN promotions.description IS 'Текстовое описание условий акции.';
+COMMENT ON COLUMN promotions.discount_value IS 'Значение скидки: процент или фиксированная сумма (в зависимости от type).';
+COMMENT ON COLUMN promotions.min_order_sum IS 'Минимальная сумма заказа для применения акции.';
+COMMENT ON COLUMN promotions.start_date IS 'Дата и время начала действия акции.';
+COMMENT ON COLUMN promotions.end_date IS 'Дата и время окончания действия акции.';
+COMMENT ON COLUMN promotions.is_active IS 'Признак активности акции (вкл/выкл вручную).';
+
+COMMENT ON TABLE promotion_products IS 'Связь many-to-many между акциями и товарами, для которых акция действует.';
+COMMENT ON COLUMN promotion_products.promotion_id IS 'Ссылка на акцию (promotions.id).';
+COMMENT ON COLUMN promotion_products.product_id IS 'Ссылка на товар (products.id), участвующий в акции.';
+
+-- SUP
+COMMENT ON TABLE support_tickets IS 'Тикеты службы поддержки: обращения клиентов по заказам, оплате, доставке и товарам.';
+COMMENT ON COLUMN support_tickets.id IS 'Уникальный идентификатор тикета (PK).';
+COMMENT ON COLUMN support_tickets.customer_id IS 'Ссылка на клиента-автора обращения (customers.id).';
+COMMENT ON COLUMN support_tickets.subject IS 'Тема обращения.';
+COMMENT ON COLUMN support_tickets.message IS 'Подробный текст обращения клиента.';
+COMMENT ON COLUMN support_tickets.status IS 'Статус обработки тикета: open, in_progress, resolved, closed.';
+COMMENT ON COLUMN support_tickets.created_at IS 'Дата и время создания тикета.';
+COMMENT ON COLUMN support_tickets.updated_at IS 'Дата и время последнего изменения тикета.';
+
+-- CLI
+COMMENT ON TABLE customer_segments IS 'Сегменты клиентов для аналитики, маркетинга и персонализации.';
+COMMENT ON COLUMN customer_segments.id IS 'Уникальный идентификатор сегмента (PK).';
+COMMENT ON COLUMN customer_segments.name IS 'Уникальное название сегмента.';
+COMMENT ON COLUMN customer_segments.description IS 'Описание логики сегментации и назначения сегмента.';
+
+COMMENT ON TABLE customer_segment_members IS 'Состав сегментов: какие клиенты входят в какие сегменты.';
+COMMENT ON COLUMN customer_segment_members.segment_id IS 'Ссылка на сегмент (customer_segments.id).';
+COMMENT ON COLUMN customer_segment_members.customer_id IS 'Ссылка на клиента (customers.id), входящего в сегмент.';
+
 
 -- ============================================================
 -- Seed Data

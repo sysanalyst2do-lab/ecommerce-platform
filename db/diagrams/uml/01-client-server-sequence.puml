@@ -1,0 +1,24 @@
+@startuml
+title Клиент-Серверное взаимодействие (на примере списка заказов)
+
+actor User as "Пользователь"
+participant Browser as "Frontend (React, :3000)"
+participant API as "Backend API (FastAPI, :8000)"
+database DB as "PostgreSQL (:5433)"
+
+User -> Browser: Открывает страницу "Заказы"
+Browser -> API: GET /api/v1/orders?limit=20
+API -> DB: SELECT ... FROM orders\nLEFT JOIN customers/payments
+DB --> API: Набор строк заказа
+API --> Browser: 200 OK + JSON
+Browser --> User: Отрисованный список заказов
+
+note right of Browser
+Frontend отвечает за UI:\n- отправляет HTTP-запрос\n- получает JSON\n- отображает данные
+end note
+
+note right of API
+Backend отвечает за:\n- маршрутизацию\n- валидацию\n- бизнес-логику\n- доступ к БД
+end note
+
+@enduml

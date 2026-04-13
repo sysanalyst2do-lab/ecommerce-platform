@@ -1,0 +1,30 @@
+Project conceptual_ecommerce {
+  Note: 'Концептуальная модель: только бизнес-сущности и связи без технических деталей.'
+}
+
+Table Customers {
+  customer_id int [pk]
+  Note: 'Покупатели интернет-магазина'
+}
+
+Table Orders {
+  order_id varchar [pk]
+  customer_id int
+  Note: 'Заказы, оформленные клиентами'
+}
+
+Table OrderItems {
+  order_item_id int [pk]
+  order_id varchar
+  product_id int
+  Note: 'Позиции заказов: какие товары входят в заказ'
+}
+
+Table Products {
+  product_id int [pk]
+  Note: 'Товары каталога'
+}
+
+Ref: Orders.customer_id > Customers.customer_id
+Ref: OrderItems.order_id > Orders.order_id
+Ref: OrderItems.product_id > Products.product_id

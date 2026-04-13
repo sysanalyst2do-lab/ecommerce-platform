@@ -41,6 +41,7 @@ docker-compose up --build
 - **Backend API**: http://localhost:8000/api/v1/orders
 - **OpenAPI (Swagger)**: http://localhost:8000/docs
 - **OpenAPI (ReDoc)**: http://localhost:8000/redoc
+- **Logs UI (Dozzle)**: http://localhost:8080
 
 ### Локальная разработка
 
@@ -103,6 +104,22 @@ ecommerce-platform/
 | `POST` | `/api/v1/orders` | Создать заказ |
 | `PATCH` | `/api/v1/orders/{id}/status` | Обновить статус |
 | `DELETE` | `/api/v1/orders/{id}` | Удалить заказ |
+
+## Логи (быстрый доступ)
+
+Для простого просмотра логов используется **Dozzle**.
+
+- Web UI: `http://localhost:8080`
+- Логи по сервисам: `backend`, `frontend`, `db`
+- Live-режим: включи `Follow` в интерфейсе
+
+CLI-альтернатива:
+
+```bash
+docker-compose logs -f backend
+docker-compose logs -f frontend
+docker-compose logs -f db
+```
 
 ## База данных
 

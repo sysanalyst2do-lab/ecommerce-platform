@@ -892,3 +892,64 @@ SELECT id, 'paid_orders', 'Paid orders should not exceed total orders', 'consist
        'SELECT order_date FROM analytics.sales_daily WHERE paid_orders > orders_total', 'warning', 0.00, TRUE
 FROM metadata_data_assets
 WHERE schema_name = 'analytics' AND object_name = 'sales_daily' AND object_type = 'view';
+
+-- ============================================================
+-- Technical DB users (read-only + admin)
+-- ============================================================
+-- Замените пароли перед продакшен-деплоем.
+-- Пароли задаются отдельным init-скриптом db/init-users.sh из переменных окружения.
+-- Рекомендация: хранить реальные секреты вне репозитория (env / secret manager).
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'ecom_tech_ro') THEN
+        CREATE ROLE ecom_tech_ro LOGIN;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'ecom_tech_admin') THEN
+        CREATE ROLE ecom_tech_admin LOGIN;
+    END IF;
+END
+$$;
+
+GRANT CONNECT ON DATABASE ecommerce TO ecom_tech_ro;
+GRANT CONNECT ON DATABASE ecommerce TO ecom_tech_admin;
+
+GRANT USAGE ON SCHEMA public TO ecom_tech_ro;
+GRANT USAGE ON SCHEMA analytics TO ecom_tech_ro;
+
+GRANT USAGE, CREATE ON SCHEMA public TO ecom_tech_admin;
+GRANT USAGE, CREATE ON SCHEMA analytics TO ecom_tech_admin;
+
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO ecom_tech_ro;
+GRANT SELECT ON ALL TABLES IN SCHEMA analytics TO ecom_tech_ro;
+GRANT SELECT ON ALL SEQUENCES IN SCHEMA public TO ecom_tech_ro;
+GRANT SELECT ON ALL SEQUENCES IN SCHEMA analytics TO ecom_tech_ro;
+
+ALTER DEFAULT PRIVILEGES FOR ROLE ecommerce IN SCHEMA public
+    GRANT SELECT ON TABLES TO ecom_tech_ro;
+ALTER DEFAULT PRIVILEGES FOR ROLE ecommerce IN SCHEMA analytics
+    GRANT SELECT ON TABLES TO ecom_tech_ro;
+ALTER DEFAULT PRIVILEGES FOR ROLE ecommerce IN SCHEMA public
+    GRANT SELECT ON SEQUENCES TO ecom_tech_ro;
+ALTER DEFAULT PRIVILEGES FOR ROLE ecommerce IN SCHEMA analytics
+    GRANT SELECT ON SEQUENCES TO ecom_tech_ro;
+
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO ecom_tech_admin;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA analytics TO ecom_tech_admin;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO ecom_tech_admin;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA analytics TO ecom_tech_admin;
+GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public TO ecom_tech_admin;
+GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA analytics TO ecom_tech_admin;
+
+ALTER DEFAULT PRIVILEGES FOR ROLE ecommerce IN SCHEMA public
+    GRANT ALL PRIVILEGES ON TABLES TO ecom_tech_admin;
+ALTER DEFAULT PRIVILEGES FOR ROLE ecommerce IN SCHEMA analytics
+    GRANT ALL PRIVILEGES ON TABLES TO ecom_tech_admin;
+ALTER DEFAULT PRIVILEGES FOR ROLE ecommerce IN SCHEMA public
+    GRANT ALL PRIVILEGES ON SEQUENCES TO ecom_tech_admin;
+ALTER DEFAULT PRIVILEGES FOR ROLE ecommerce IN SCHEMA analytics
+    GRANT ALL PRIVILEGES ON SEQUENCES TO ecom_tech_admin;
+ALTER DEFAULT PRIVILEGES FOR ROLE ecommerce IN SCHEMA public
+    GRANT ALL PRIVILEGES ON FUNCTIONS TO ecom_tech_admin;
+ALTER DEFAULT PRIVILEGES FOR ROLE ecommerce IN SCHEMA analytics
+    GRANT ALL PRIVILEGES ON FUNCTIONS TO ecom_tech_admin;

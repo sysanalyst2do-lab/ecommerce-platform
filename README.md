@@ -32,6 +32,16 @@
 
 ### Docker Compose (рекомендуется)
 
+Перед первым запуском создай `.env` на основе примера:
+
+```bash
+cp .env.example .env
+```
+
+И укажи в `.env` значения:
+- `TECH_RO_PASSWORD` — пароль для `ecom_tech_ro` (только чтение)
+- `TECH_ADMIN_PASSWORD` — пароль для `ecom_tech_admin` (расширенные права)
+
 ```bash
 docker-compose up --build
 ```

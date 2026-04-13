@@ -1,0 +1,49 @@
+@startuml
+title Что такое API (контракт между Frontend и Backend)
+skinparam classAttributeIconSize 0
+
+class FrontendClient {
+  +GET /api/v1/orders
+  +POST /api/v1/orders
+  +PATCH /api/v1/orders/{id}/status
+}
+
+interface OrdersAPI {
+  +listOrders(status, customer_id, limit, offset): OrderListResponse
+  +getOrder(order_id): OrderDetail
+  +createOrder(body: OrderCreate): OrderCreated
+  +updateStatus(order_id, body: StatusUpdate): StatusUpdated
+  +deleteOrder(order_id): 204 No Content
+}
+
+class BackendController {
+  +routers/orders.py
+  +HTTP status codes: 200, 201, 204, 404, 422
+}
+
+class OrderCreate {
+  +customer_id: int
+  +comment: string
+  +source: string
+  +tags: string[]
+  +items: OrderItemIn[]
+  +payment: PaymentIn?
+}
+
+class OrderListResponse {
+  +data: OrderListItem[]
+  +total: int
+  +limit: int
+  +offset: int
+}
+
+FrontendClient --> OrdersAPI : HTTP/JSON
+OrdersAPI <|.. BackendController : реализует
+OrdersAPI ..> OrderCreate : принимает
+OrdersAPI ..> OrderListResponse : возвращает
+
+note bottom of OrdersAPI
+API = формальный контракт:\nчто можно вызвать, какие поля передать,\nчто и в каком формате вернется.
+end note
+
+@enduml

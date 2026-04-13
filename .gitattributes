@@ -1,0 +1,2 @@
+# Shell scripts for Linux containers must use LF (CRLF breaks shebang in Alpine).
+db/*.sh text eol=lf

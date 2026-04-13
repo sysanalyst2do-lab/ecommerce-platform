@@ -1,0 +1,49 @@
+Project logical_ecommerce {
+  Note: 'Логическая модель: бизнес-атрибуты, связи, ключи и правила предметной области.'
+}
+
+Table Customers {
+  customer_id int [pk, note: 'Идентификатор клиента']
+  full_name varchar [not null, note: 'Имя клиента']
+  email varchar [not null, unique, note: 'Уникальный email']
+  is_verified boolean [not null, note: 'Признак верификации']
+  created_at datetime [not null, note: 'Дата регистрации']
+
+  Note: 'Сущность клиента'
+}
+
+Table Products {
+  product_id int [pk, note: 'Идентификатор товара']
+  sku varchar [not null, unique, note: 'Уникальный артикул']
+  product_name varchar [not null, note: 'Название товара']
+  price decimal [not null, note: 'Текущая цена']
+  is_active boolean [not null, note: 'Доступность товара']
+
+  Note: 'Сущность товара'
+}
+
+Table Orders {
+  order_id varchar [pk, note: 'Бизнес-ID заказа']
+  customer_id int [not null, note: 'Клиент, оформивший заказ']
+  status varchar [not null, note: 'Состояние заказа']
+  is_paid boolean [not null, note: 'Флаг оплаты']
+  created_at datetime [not null]
+  updated_at datetime [not null]
+
+  Note: 'Шапка заказа'
+}
+
+Table OrderItems {
+  order_item_id int [pk]
+  order_id varchar [not null, note: 'FK на заказ']
+  product_id int [not null, note: 'FK на товар']
+  product_name_snapshot varchar [not null, note: 'Имя товара в момент покупки']
+  quantity int [not null, note: 'Количество единиц']
+  unit_price decimal [not null, note: 'Цена за единицу в момент покупки']
+
+  Note: 'Позиции заказа (снимок состава и цены)'
+}
+
+Ref: Orders.customer_id > Customers.customer_id
+Ref: OrderItems.order_id > Orders.order_id
+Ref: OrderItems.product_id > Products.product_id

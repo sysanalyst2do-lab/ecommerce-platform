@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .routers import orders
+from .routers import cookies, orders
 
 app = FastAPI(
     title="E-commerce Orders API",
@@ -14,11 +14,13 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000"],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 app.include_router(orders.router)
+app.include_router(cookies.router)
 
 
 @app.get("/health", tags=["system"])

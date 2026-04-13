@@ -213,7 +213,7 @@ CREATE TABLE customer_segment_members (
 -- ============================================================
 
 -- ACC
-COMMENT ON TABLE customers IS 'Покупатели интернет-магазина: базовый профиль клиента, контактные данные и статус верификации.';
+COMMENT ON TABLE customers IS '[DAMA-DMBOK: Master Data] Покупатели интернет-магазина: базовый профиль клиента, контактные данные и статус верификации.';
 COMMENT ON COLUMN customers.id IS 'Уникальный идентификатор покупателя (PK). Используется как ссылка во всех связанных таблицах.';
 COMMENT ON COLUMN customers.name IS 'Имя и фамилия покупателя, отображается в личном кабинете, заказах и поддержке.';
 COMMENT ON COLUMN customers.email IS 'Основной email покупателя. Уникален, используется для входа, уведомлений и чеков.';
@@ -222,7 +222,7 @@ COMMENT ON COLUMN customers.password_hash IS 'Хеш пароля (никогд�
 COMMENT ON COLUMN customers.is_verified IS 'Признак подтверждения аккаунта (email/телефон). TRUE — профиль подтвержден.';
 COMMENT ON COLUMN customers.created_at IS 'Дата и время регистрации покупателя.';
 
-COMMENT ON TABLE addresses IS 'Адреса доставки покупателей. Один покупатель может иметь несколько адресов (дом, офис и т.д.).';
+COMMENT ON TABLE addresses IS '[DAMA-DMBOK: Master Data] Адреса доставки покупателей. Один покупатель может иметь несколько адресов (дом, офис и т.д.).';
 COMMENT ON COLUMN addresses.id IS 'Уникальный идентификатор адреса (PK).';
 COMMENT ON COLUMN addresses.customer_id IS 'Ссылка на владельца адреса (customers.id). При удалении клиента адрес удаляется каскадно.';
 COMMENT ON COLUMN addresses.label IS 'Пользовательская метка адреса: например, "Дом", "Офис", "Склад".';
@@ -236,14 +236,14 @@ COMMENT ON COLUMN addresses.is_default IS 'Признак адреса по ум
 COMMENT ON COLUMN addresses.created_at IS 'Дата и время добавления адреса.';
 
 -- CAT
-COMMENT ON TABLE categories IS 'Категории каталога товаров. Поддерживается иерархия через parent_id.';
+COMMENT ON TABLE categories IS '[DAMA-DMBOK: Reference Data] Категории каталога товаров. Поддерживается иерархия через parent_id.';
 COMMENT ON COLUMN categories.id IS 'Уникальный идентификатор категории (PK).';
 COMMENT ON COLUMN categories.name IS 'Название категории, отображаемое в каталоге и фильтрах.';
 COMMENT ON COLUMN categories.parent_id IS 'Ссылка на родительскую категорию (self-reference). NULL означает корневую категорию.';
 COMMENT ON COLUMN categories.sort_order IS 'Порядок сортировки категории в меню/каталоге (меньше — выше).';
 COMMENT ON COLUMN categories.is_active IS 'Признак активности категории. Неактивные категории можно скрывать на витрине.';
 
-COMMENT ON TABLE products IS 'Каталог товаров магазина: чай, книги и другие позиции, доступные к продаже.';
+COMMENT ON TABLE products IS '[DAMA-DMBOK: Master Data] Каталог товаров магазина: чай, книги и другие позиции, доступные к продаже.';
 COMMENT ON COLUMN products.id IS 'Уникальный идентификатор товара (PK).';
 COMMENT ON COLUMN products.sku IS 'Уникальный артикул товара (Stock Keeping Unit), используется в операционном учете.';
 COMMENT ON COLUMN products.name IS 'Название товара, отображаемое на витрине и в заказах.';
@@ -257,12 +257,12 @@ COMMENT ON COLUMN products.created_at IS 'Дата и время создани�
 COMMENT ON COLUMN products.updated_at IS 'Дата и время последнего обновления карточки товара.';
 
 -- INV
-COMMENT ON TABLE warehouses IS 'Склады хранения товаров. Нужны для учета остатков и логистики.';
+COMMENT ON TABLE warehouses IS '[DAMA-DMBOK: Master Data] Справочник складов хранения товаров. Нужны для учета остатков и логистики.';
 COMMENT ON COLUMN warehouses.id IS 'Уникальный идентификатор склада (PK).';
 COMMENT ON COLUMN warehouses.name IS 'Человеко-читаемое название склада.';
 COMMENT ON COLUMN warehouses.location IS 'Адрес/описание расположения склада.';
 
-COMMENT ON TABLE inventory IS 'Остатки товаров по складам (складской учет).';
+COMMENT ON TABLE inventory IS '[DAMA-DMBOK: Transactional Data] Операционные остатки товаров по складам (складской учет), изменяются в ходе бизнес-процессов.';
 COMMENT ON COLUMN inventory.id IS 'Уникальный идентификатор записи остатка (PK).';
 COMMENT ON COLUMN inventory.product_id IS 'Ссылка на товар (products.id).';
 COMMENT ON COLUMN inventory.warehouse_id IS 'Ссылка на склад (warehouses.id).';
@@ -271,21 +271,21 @@ COMMENT ON COLUMN inventory.min_level IS 'Минимальный рекомен�
 COMMENT ON COLUMN inventory.updated_at IS 'Дата и время последнего обновления остатка.';
 
 -- CRT
-COMMENT ON TABLE carts IS 'Корзины покупок. Могут быть привязаны к авторизованному пользователю или гостевой сессии.';
+COMMENT ON TABLE carts IS '[DAMA-DMBOK: Transactional Data] Корзины покупок. Могут быть привязаны к авторизованному пользователю или гостевой сессии.';
 COMMENT ON COLUMN carts.id IS 'Уникальный идентификатор корзины (PK).';
 COMMENT ON COLUMN carts.customer_id IS 'Ссылка на покупателя (customers.id). NULL для гостевой корзины.';
 COMMENT ON COLUMN carts.session_id IS 'Идентификатор гостевой сессии/браузера для неавторизованных корзин.';
 COMMENT ON COLUMN carts.created_at IS 'Дата и время создания корзины.';
 COMMENT ON COLUMN carts.updated_at IS 'Дата и время последнего изменения корзины.';
 
-COMMENT ON TABLE cart_items IS 'Позиции в корзине: какой товар и в каком количестве добавлен.';
+COMMENT ON TABLE cart_items IS '[DAMA-DMBOK: Transactional Data] Позиции в корзине: какой товар и в каком количестве добавлен.';
 COMMENT ON COLUMN cart_items.id IS 'Уникальный идентификатор позиции корзины (PK).';
 COMMENT ON COLUMN cart_items.cart_id IS 'Ссылка на корзину (carts.id). При удалении корзины позиции удаляются каскадно.';
 COMMENT ON COLUMN cart_items.product_id IS 'Ссылка на товар (products.id), добавленный в корзину.';
 COMMENT ON COLUMN cart_items.quantity IS 'Количество единиц товара в данной позиции корзины.';
 
 -- ORD / CHK
-COMMENT ON TABLE orders IS 'Заказы покупателей: шапка заказа со статусом, источником, метаинформацией и признаком оплаты.';
+COMMENT ON TABLE orders IS '[DAMA-DMBOK: Transactional Data] Заказы покупателей: шапка заказа со статусом, источником, метаинформацией и признаком оплаты.';
 COMMENT ON COLUMN orders.order_id IS 'Бизнес-идентификатор заказа (PK), читаемый номер в формате ORD-...';
 COMMENT ON COLUMN orders.customer_id IS 'Ссылка на покупателя, оформившего заказ (customers.id).';
 COMMENT ON COLUMN orders.status IS 'Текущий статус жизненного цикла заказа (created/paid/processing/shipped/delivered/cancelled).';
@@ -297,7 +297,7 @@ COMMENT ON COLUMN orders.tags IS 'Набор тегов заказа для се
 COMMENT ON COLUMN orders.created_at IS 'Дата и время создания заказа.';
 COMMENT ON COLUMN orders.updated_at IS 'Дата и время последнего обновления заказа.';
 
-COMMENT ON TABLE order_items IS 'Позиции заказа (snapshot): фиксируют товар, имя и цену на момент покупки.';
+COMMENT ON TABLE order_items IS '[DAMA-DMBOK: Transactional Data] Позиции заказа (snapshot): фиксируют товар, имя и цену на момент покупки.';
 COMMENT ON COLUMN order_items.id IS 'Уникальный идентификатор позиции заказа (PK).';
 COMMENT ON COLUMN order_items.order_id IS 'Ссылка на заказ (orders.order_id).';
 COMMENT ON COLUMN order_items.product_id IS 'Артикул/идентификатор товарной позиции на момент заказа (хранится как строка).';
@@ -306,7 +306,7 @@ COMMENT ON COLUMN order_items.quantity IS 'Количество единиц т�
 COMMENT ON COLUMN order_items.price IS 'Цена за единицу товара на момент оформления заказа.';
 COMMENT ON COLUMN order_items.in_stock IS 'Флаг наличия товара в момент обработки/комплектации позиции.';
 
-COMMENT ON TABLE payments IS 'Платежные операции по заказам.';
+COMMENT ON TABLE payments IS '[DAMA-DMBOK: Transactional Data] Платежные операции по заказам.';
 COMMENT ON COLUMN payments.id IS 'Уникальный идентификатор платежа (PK).';
 COMMENT ON COLUMN payments.order_id IS 'Ссылка на заказ, к которому относится платеж (orders.order_id).';
 COMMENT ON COLUMN payments.method IS 'Метод оплаты: card, cash, sbp, wallet.';
@@ -314,7 +314,7 @@ COMMENT ON COLUMN payments.total IS 'Итоговая сумма платежа.
 COMMENT ON COLUMN payments.currency IS 'Валюта платежа в формате ISO 4217 (например, RUB, USD).';
 COMMENT ON COLUMN payments.paid_at IS 'Дата и время подтверждения оплаты. NULL, если платеж не завершен.';
 
-COMMENT ON TABLE order_status_history IS 'История переходов статусов заказа (audit trail процесса исполнения).';
+COMMENT ON TABLE order_status_history IS '[DAMA-DMBOK: Transactional Data] История переходов статусов заказа (audit trail процесса исполнения).';
 COMMENT ON COLUMN order_status_history.id IS 'Уникальный идентификатор записи истории (PK).';
 COMMENT ON COLUMN order_status_history.order_id IS 'Ссылка на заказ (orders.order_id), статус которого изменился.';
 COMMENT ON COLUMN order_status_history.status IS 'Новый статус заказа, установленный в момент записи.';
@@ -323,7 +323,7 @@ COMMENT ON COLUMN order_status_history.changed_by IS 'Источник изме�
 COMMENT ON COLUMN order_status_history.comment IS 'Служебный комментарий к смене статуса.';
 
 -- MKT
-COMMENT ON TABLE promotions IS 'Маркетинговые акции и промокоды (скидки, фиксированная скидка, бесплатная доставка).';
+COMMENT ON TABLE promotions IS '[DAMA-DMBOK: Reference Data] Маркетинговые акции и промокоды (скидки, фиксированная скидка, бесплатная доставка) как управляемые правила применения.';
 COMMENT ON COLUMN promotions.id IS 'Уникальный идентификатор акции (PK).';
 COMMENT ON COLUMN promotions.code IS 'Уникальный промокод, который вводит пользователь при оформлении.';
 COMMENT ON COLUMN promotions.type IS 'Тип акции: percentage, fixed, free_shipping.';
@@ -334,12 +334,12 @@ COMMENT ON COLUMN promotions.start_date IS 'Дата и время начала 
 COMMENT ON COLUMN promotions.end_date IS 'Дата и время окончания действия акции.';
 COMMENT ON COLUMN promotions.is_active IS 'Признак активности акции (вкл/выкл вручную).';
 
-COMMENT ON TABLE promotion_products IS 'Связь many-to-many между акциями и товарами, для которых акция действует.';
+COMMENT ON TABLE promotion_products IS '[DAMA-DMBOK: Reference Data] Связь many-to-many между акциями и товарами, для которых акция действует.';
 COMMENT ON COLUMN promotion_products.promotion_id IS 'Ссылка на акцию (promotions.id).';
 COMMENT ON COLUMN promotion_products.product_id IS 'Ссылка на товар (products.id), участвующий в акции.';
 
 -- SUP
-COMMENT ON TABLE support_tickets IS 'Тикеты службы поддержки: обращения клиентов по заказам, оплате, доставке и товарам.';
+COMMENT ON TABLE support_tickets IS '[DAMA-DMBOK: Transactional Data] Тикеты службы поддержки: обращения клиентов по заказам, оплате, доставке и товарам.';
 COMMENT ON COLUMN support_tickets.id IS 'Уникальный идентификатор тикета (PK).';
 COMMENT ON COLUMN support_tickets.customer_id IS 'Ссылка на клиента-автора обращения (customers.id).';
 COMMENT ON COLUMN support_tickets.subject IS 'Тема обращения.';
@@ -349,12 +349,12 @@ COMMENT ON COLUMN support_tickets.created_at IS 'Дата и время созд
 COMMENT ON COLUMN support_tickets.updated_at IS 'Дата и время последнего изменения тикета.';
 
 -- CLI
-COMMENT ON TABLE customer_segments IS 'Сегменты клиентов для аналитики, маркетинга и персонализации.';
+COMMENT ON TABLE customer_segments IS '[DAMA-DMBOK: Reference Data] Сегменты клиентов для аналитики, маркетинга и персонализации как управляемый справочник.';
 COMMENT ON COLUMN customer_segments.id IS 'Уникальный идентификатор сегмента (PK).';
 COMMENT ON COLUMN customer_segments.name IS 'Уникальное название сегмента.';
 COMMENT ON COLUMN customer_segments.description IS 'Описание логики сегментации и назначения сегмента.';
 
-COMMENT ON TABLE customer_segment_members IS 'Состав сегментов: какие клиенты входят в какие сегменты.';
+COMMENT ON TABLE customer_segment_members IS '[DAMA-DMBOK: Reference Data] Состав сегментов: какие клиенты входят в какие сегменты.';
 COMMENT ON COLUMN customer_segment_members.segment_id IS 'Ссылка на сегмент (customer_segments.id).';
 COMMENT ON COLUMN customer_segment_members.customer_id IS 'Ссылка на клиента (customers.id), входящего в сегмент.';
 

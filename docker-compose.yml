@@ -27,6 +27,7 @@ services:
       - "8000:8000"
     environment:
       DATABASE_URL: postgresql://ecommerce:secret@db:5432/ecommerce
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,https://demo2dev.ru,https://www.demo2dev.ru}
     depends_on:
       db:
         condition: service_healthy
@@ -37,8 +38,24 @@ services:
       - "3000:3000"
     environment:
       API_URL: http://backend:8000
+      # На сервере с Caddy добавьте в .env: BEHIND_TLS_PROXY=1 (для HMR по https)
+      BEHIND_TLS_PROXY: ${BEHIND_TLS_PROXY:-}
+      VITE_APP_HOST: ${VITE_APP_HOST:-demo2dev.ru}
     depends_on:
       - backend
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - frontend
 
   dozzle:
     image: amir20/dozzle:latest
@@ -50,3 +67,5 @@ services:
 
 volumes:
   pgdata:
+  caddy_data:
+  caddy_config:

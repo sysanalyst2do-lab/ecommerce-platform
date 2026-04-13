@@ -1,13 +1,10 @@
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { OrderList } from "./components/OrderList";
 import { OrderDetailPage } from "./components/OrderDetail";
 import { OrderForm } from "./components/OrderForm";
 import devStandImage from "./assets/dev-stand.png";
 
 function AppLayout() {
-  const location = useLocation();
-  const isHomePage = location.pathname === "/";
-
   return (
     <div className="container">
       <div className="dev-stand-chip" aria-label="Development stand" tabIndex={0}>
@@ -19,13 +16,13 @@ function AppLayout() {
 
       <header className="app-header">
         <div className="header-left">
-          <nav>
-            <a href="/docs" target="_blank" rel="noopener">OpenAPI Docs</a>
-          </nav>
+          <img className="header-cat" src={devStandImage} alt="Dev stand cat" />
         </div>
         <a href="/" className="logo logo-centered">E-commerce Orders</a>
         <div className="header-right">
-          {isHomePage ? <img className="header-cat" src={devStandImage} alt="Dev stand cat" /> : null}
+          <nav>
+            <a href="/docs" target="_blank" rel="noopener">OpenAPI Docs</a>
+          </nav>
         </div>
       </header>
 

@@ -214,79 +214,120 @@ CREATE TABLE customer_segment_members (
 -- ============================================================
 
 INSERT INTO customers (id, name, email, phone, is_verified) VALUES
-    (1, 'Алексей Петров',  'a.petrov@example.com',  '+79161234567', TRUE),
-    (2, 'Мария Иванова',   'm.ivanova@example.com', '+79269876543', TRUE),
-    (3, 'Дмитрий Сидоров', 'd.sidorov@example.com', NULL,           FALSE);
-SELECT setval('customers_id_seq', 3);
+    (1, 'Линус Торвальдс',            'linus.torvalds@example.com',        '+358401112233', TRUE),
+    (2, 'Гвидо ван Россум',           'guido.vanrossum@example.com',       '+31620123456',  TRUE),
+    (3, 'Роберт Мартин',              'robert.martin@example.com',         '+13125550101',  TRUE),
+    (4, 'Мартин Фаулер',              'martin.fowler@example.com',         '+447700900111', TRUE),
+    (5, 'Кент Бек',                   'kent.beck@example.com',             '+14155550199',  TRUE),
+    (6, 'Эндрю Таненбаум',            'andrew.tanenbaum@example.com',      '+31201234567',  FALSE);
+SELECT setval('customers_id_seq', 6);
 
 INSERT INTO categories (id, name, parent_id, sort_order) VALUES
-    (1, 'Электроника',  NULL, 1),
-    (2, 'Наушники',     1,    1),
-    (3, 'Аксессуары',   1,    2),
-    (4, 'Кабели',       3,    1),
-    (5, 'Одежда',       NULL, 2);
-SELECT setval('categories_id_seq', 5);
+    (1, 'Элитные китайские чаи', NULL, 1),
+    (2, 'Улуны',                1,    1),
+    (3, 'Пуэры',                1,    2),
+    (4, 'Зеленые чаи',          1,    3),
+    (5, 'IT-книги',             NULL, 2),
+    (6, 'Архитектура и практики', 5, 1);
+SELECT setval('categories_id_seq', 6);
 
 INSERT INTO products (id, sku, name, description, price, category_id, brand, is_active) VALUES
-    (1, 'SKU-1001', 'Наушники Sony WH-1000XM5', 'Беспроводные наушники с шумоподавлением', 32990.00, 2, 'Sony',    TRUE),
-    (2, 'SKU-1002', 'Наушники Sony WH-1000XM4', 'Предыдущее поколение',                    24990.00, 2, 'Sony',    TRUE),
-    (3, 'SKU-2045', 'Чехол для наушников',       'Кожаный чехол',                           1500.00,  3, NULL,      TRUE),
-    (4, 'SKU-3378', 'Кабель USB-C 2м',           'USB-C to USB-C',                          690.00,   4, 'Baseus',  TRUE),
-    (5, 'SKU-5010', 'Футболка белая L',           'Хлопок 100%',                            1200.00,  5, 'Basic',   TRUE);
-SELECT setval('products_id_seq', 5);
+    (1,  'TEA-DAHONGPAO-050',  'Да Хун Пао (50 г)',                  'Скальный улун из Уишань, насыщенный вкус с нотами карамели',       3490.00, 2, 'Wuyi Reserve', TRUE),
+    (2,  'TEA-TIEGUANYIN-050', 'Те Гуань Инь Премиум (50 г)',        'Аньсийский улун с цветочным ароматом и долгим послевкусием',       2890.00, 2, 'Anxi Heritage', TRUE),
+    (3,  'TEA-SHU-2018-100',   'Шу Пуэр Гунтин 2018 (100 г)',        'Выдержанный шу пуэр, плотный настой, древесно-сливочные ноты',     2590.00, 3, 'Yunnan Craft',  TRUE),
+    (4,  'TEA-SHEN-2020-100',  'Шен Пуэр Бинча 2020 (100 г)',        'Молодой шен пуэр с яркой травянистостью и медовой сладостью',      3190.00, 3, 'Yunnan Craft',  TRUE),
+    (5,  'TEA-LONGJING-050',   'Лунцзин Императорский (50 г)',       'Легендарный зеленый чай, ореховые ноты и мягкая сладость',         3790.00, 4, 'Hangzhou Select', TRUE),
+    (6,  'BOOK-DDD',           'Domain-Driven Design',               'Eric Evans. Стратегический и тактический дизайн сложных систем',   5290.00, 6, 'Addison-Wesley', TRUE),
+    (7,  'BOOK-CLEAN-CODE',    'Clean Code',                         'Robert C. Martin. Практики написания поддерживаемого кода',         4190.00, 6, 'Prentice Hall', TRUE),
+    (8,  'BOOK-REF-ARCH',      'Refactoring',                        'Martin Fowler. Улучшение архитектуры существующего кода',           4590.00, 6, 'Addison-Wesley', TRUE),
+    (9,  'BOOK-PYTHON',        'Python Cookbook',                    'David Beazley, Brian K. Jones. Рецепты для продвинутой разработки', 4890.00, 5, 'O Reilly Media', TRUE),
+    (10, 'BOOK-LINUX',         'Just for Fun',                       'Linus Torvalds. История создания Linux и философия разработки',      2990.00, 5, 'HarperBusiness', TRUE);
+SELECT setval('products_id_seq', 10);
 
 INSERT INTO warehouses (id, name, location) VALUES
-    (1, 'Основной склад', 'Москва, ул. Складская 1');
+    (1, 'Главный склад', 'Москва, ул. Чайная, 8'),
+    (2, 'Книжный склад', 'Санкт-Петербург, пр. Типографский, 12');
+SELECT setval('warehouses_id_seq', 2);
 
 INSERT INTO inventory (product_id, warehouse_id, quantity, min_level) VALUES
-    (1, 1, 50,  10),
-    (2, 1, 30,  10),
-    (3, 1, 200, 20),
-    (4, 1, 500, 50),
-    (5, 1, 0,   25);
+    (1, 1, 120, 15),
+    (2, 1, 100, 15),
+    (3, 1, 85,  10),
+    (4, 1, 70,  10),
+    (5, 1, 60,  10),
+    (6, 2, 40,  5),
+    (7, 2, 65,  8),
+    (8, 2, 50,  8),
+    (9, 2, 55,  8),
+    (10, 2, 30, 5);
 
 INSERT INTO addresses (customer_id, label, city, street, building, apartment, postal_code, is_default) VALUES
-    (1, 'Дом',    'Москва', 'ул. Ленина',    '42', '7А',  '101000', TRUE),
-    (1, 'Работа', 'Москва', 'ул. Тверская',  '10', '501', '125009', FALSE),
-    (2, 'Дом',    'Санкт-Петербург', 'Невский пр.', '100', '12', '190000', TRUE);
+    (1, 'Дом',    'Хельсинки',       'Mannerheimintie',  '12',  '34', '00100', TRUE),
+    (2, 'Дом',    'Амстердам',       'Prinsengracht',    '241', NULL, '1016',  TRUE),
+    (3, 'Дом',    'Чикаго',          'W Madison St',     '230', '19B', '60606', TRUE),
+    (4, 'Дом',    'Лондон',          'Baker Street',     '221B', NULL, 'NW1',   TRUE),
+    (5, 'Коворкинг', 'Сан-Франциско','Market Street',    '201', '40', '94103', FALSE),
+    (6, 'Дом',    'Амстердам',       'Damrak',           '101', '22', '1012',  TRUE);
 
 INSERT INTO orders (order_id, customer_id, status, is_paid, comment, source, ip, tags, created_at) VALUES
-    ('ORD-2026-0042', 1, 'shipped',   TRUE,  NULL,                      'web',    '192.168.1.100', ARRAY['электроника','промо'],              '2026-03-05T14:32:07+03:00'),
-    ('ORD-2026-0043', 2, 'created',   FALSE, 'Позвонить для уточнения', 'mobile', '10.0.0.55',     ARRAY['одежда'],                           '2026-03-05T15:10:00+03:00'),
-    ('ORD-2026-0044', 1, 'delivered', TRUE,  NULL,                      'web',    '192.168.1.100', ARRAY['электроника','повторный_клиент'],    '2026-03-01T09:00:00+03:00');
+    ('ORD-2026-0101', 1, 'delivered', TRUE,  'Подарочный набор для коллег', 'web',    '203.0.113.10', ARRAY['чай','подарок'],                     '2026-03-01T10:20:00+03:00'),
+    ('ORD-2026-0102', 2, 'processing',TRUE,  NULL,                          'mobile', '198.51.100.24', ARRAY['книги','it'],                         '2026-03-05T12:45:00+03:00'),
+    ('ORD-2026-0103', 4, 'created',   FALSE, 'Упаковать отдельно книги и чай', 'web', '192.0.2.77',   ARRAY['микс','архитектура'],                '2026-03-08T19:05:00+03:00'),
+    ('ORD-2026-0104', 3, 'shipped',   TRUE,  NULL,                          'web',    '203.0.113.77', ARRAY['чай','повторный_клиент'],            '2026-03-10T09:00:00+03:00');
 
 INSERT INTO order_items (order_id, product_id, name, quantity, price, in_stock) VALUES
-    ('ORD-2026-0042', 'SKU-1001', 'Наушники Sony WH-1000XM5', 1, 32990.00, TRUE),
-    ('ORD-2026-0042', 'SKU-2045', 'Чехол для наушников',       2,  1500.00, TRUE),
-    ('ORD-2026-0042', 'SKU-3378', 'Кабель USB-C 2м',           1,   690.00, FALSE),
-    ('ORD-2026-0043', 'SKU-5010', 'Футболка белая L',           3,  1200.00, TRUE),
-    ('ORD-2026-0044', 'SKU-1002', 'Наушники Sony WH-1000XM4',  1, 24990.00, TRUE);
+    ('ORD-2026-0101', 'TEA-DAHONGPAO-050',  'Да Хун Пао (50 г)',            2, 3490.00, TRUE),
+    ('ORD-2026-0101', 'TEA-TIEGUANYIN-050', 'Те Гуань Инь Премиум (50 г)',  1, 2890.00, TRUE),
+    ('ORD-2026-0102', 'BOOK-PYTHON',        'Python Cookbook',               1, 4890.00, TRUE),
+    ('ORD-2026-0102', 'BOOK-CLEAN-CODE',    'Clean Code',                    1, 4190.00, TRUE),
+    ('ORD-2026-0103', 'BOOK-REF-ARCH',      'Refactoring',                   1, 4590.00, TRUE),
+    ('ORD-2026-0103', 'TEA-LONGJING-050',   'Лунцзин Императорский (50 г)',  1, 3790.00, TRUE),
+    ('ORD-2026-0104', 'TEA-SHU-2018-100',   'Шу Пуэр Гунтин 2018 (100 г)',   3, 2590.00, TRUE),
+    ('ORD-2026-0104', 'BOOK-DDD',           'Domain-Driven Design',          1, 5290.00, TRUE);
 
 INSERT INTO payments (order_id, method, total, currency, paid_at) VALUES
-    ('ORD-2026-0042', 'card', 36680.00, 'RUB', '2026-03-05T14:33:12+03:00'),
-    ('ORD-2026-0044', 'sbp',  24990.00, 'RUB', '2026-03-01T09:01:30+03:00');
+    ('ORD-2026-0101', 'card',  9870.00, 'RUB', '2026-03-01T10:21:20+03:00'),
+    ('ORD-2026-0102', 'sbp',   9080.00, 'RUB', '2026-03-05T12:47:01+03:00'),
+    ('ORD-2026-0104', 'wallet',13060.00, 'RUB', '2026-03-10T09:02:11+03:00');
 
 INSERT INTO order_status_history (order_id, status, changed_by, comment) VALUES
-    ('ORD-2026-0042', 'created',    'system',               NULL),
-    ('ORD-2026-0042', 'paid',       'system',               'Оплата подтверждена'),
-    ('ORD-2026-0042', 'processing', 'operator:ivan',        'Передан на сборку'),
-    ('ORD-2026-0042', 'shipped',    'operator:ivan',        'Отгружен СДЭК'),
-    ('ORD-2026-0043', 'created',    'system',               NULL),
-    ('ORD-2026-0044', 'created',    'system',               NULL),
-    ('ORD-2026-0044', 'paid',       'system',               'Оплата СБП'),
-    ('ORD-2026-0044', 'delivered',  'system',               'Доставлен');
+    ('ORD-2026-0101', 'created',    'system',              NULL),
+    ('ORD-2026-0101', 'paid',       'system',              'Оплата банковской картой'),
+    ('ORD-2026-0101', 'processing', 'operator:tea_master', 'Передан в отдел фасовки'),
+    ('ORD-2026-0101', 'shipped',    'operator:tea_master', 'Отправлен DHL'),
+    ('ORD-2026-0101', 'delivered',  'system',              'Доставлен получателю'),
+    ('ORD-2026-0102', 'created',    'system',              NULL),
+    ('ORD-2026-0102', 'paid',       'system',              'Оплата СБП'),
+    ('ORD-2026-0102', 'processing', 'operator:book_team',  'Комплектация на книжном складе'),
+    ('ORD-2026-0103', 'created',    'system',              NULL),
+    ('ORD-2026-0104', 'created',    'system',              NULL),
+    ('ORD-2026-0104', 'paid',       'system',              'Оплачено из кошелька'),
+    ('ORD-2026-0104', 'processing', 'operator:tea_master', 'Сформирован набор пуэров'),
+    ('ORD-2026-0104', 'shipped',    'operator:tea_master', 'Передан в доставку');
 
-INSERT INTO promotions (code, type, description, discount_value, start_date, end_date, is_active) VALUES
-    ('WINTER2026', 'percentage', 'Зимняя распродажа -10%', 10.00, '2026-01-01', '2026-03-31', TRUE),
-    ('FIRST500',   'fixed',      'Скидка 500₽ на первый заказ', 500.00, '2026-01-01', '2026-12-31', TRUE);
+INSERT INTO promotions (id, code, type, description, discount_value, min_order_sum, start_date, end_date, is_active) VALUES
+    (1, 'TEA10',        'percentage', 'Скидка 10% на элитные китайские чаи', 10.00, 3000.00, '2026-01-01', '2026-12-31', TRUE),
+    (2, 'BOOK5000',     'fixed',      'Скидка 700₽ на IT-книги от 5000₽',   700.00, 5000.00, '2026-01-01', '2026-12-31', TRUE),
+    (3, 'COMBO-TEA-IT', 'free_shipping', 'Бесплатная доставка на комбо из чая и книг', 0.00, 6000.00, '2026-02-01', '2026-12-31', TRUE);
+SELECT setval('promotions_id_seq', 3);
+
+INSERT INTO promotion_products (promotion_id, product_id) VALUES
+    (1, 1), (1, 2), (1, 3), (1, 4), (1, 5),
+    (2, 6), (2, 7), (2, 8), (2, 9), (2, 10),
+    (3, 2), (3, 7), (3, 8);
 
 INSERT INTO customer_segments (id, name, description) VALUES
-    (1, 'VIP',              'Клиенты с суммой заказов > 50 000₽'),
-    (2, 'Новые',            'Зарегистрированы менее 30 дней назад'),
-    (3, 'Повторные покупки', 'Более 2 заказов');
-SELECT setval('customer_segments_id_seq', 3);
+    (1, 'Чайные гурманы',      'Клиенты, регулярно покупающие элитные китайские чаи'),
+    (2, 'IT-читатели',         'Покупатели профессиональной IT-литературы'),
+    (3, 'Коллекционеры знаний','Покупают и чай, и профильные IT-книги'),
+    (4, 'Новые клиенты',       'Первые 30 дней после регистрации');
+SELECT setval('customer_segments_id_seq', 4);
 
 INSERT INTO customer_segment_members (segment_id, customer_id) VALUES
     (1, 1),
+    (1, 3),
+    (2, 2),
+    (2, 4),
     (3, 1),
-    (2, 3);
+    (3, 4),
+    (4, 6);

@@ -1,0 +1,364 @@
+Project ecommerce_platform {
+  database_type: "PostgreSQL"
+  Note: 'Полная DBML-схема ecommerce-platform для dbdiagram.io. Включает операционный слой (public), metadata-контур и аналитический слой (analytics).'
+}
+
+Table customers {
+  id int [pk, increment, note: 'PK клиента']
+  name varchar(100) [not null, note: 'Имя и фамилия клиента']
+  email varchar(255) [not null, unique, note: 'Уникальный email']
+  phone varchar(20) [note: 'Телефон клиента']
+  password_hash varchar(255) [note: 'Хеш пароля']
+  is_verified boolean [not null, default: false, note: 'Признак верификации аккаунта']
+  created_at timestamptz [not null, default: `now()`, note: 'Дата регистрации']
+
+  Note: '[DAMA-DMBOK: Master Data] Покупатели интернет-магазина.'
+}
+
+Table addresses {
+  id int [pk, increment, note: 'PK адреса']
+  customer_id int [not null, note: 'FK на customers']
+  label varchar(50) [note: 'Метка адреса: Дом/Офис']
+  city varchar(100) [not null, note: 'Город']
+  street varchar(255) [not null, note: 'Улица']
+  building varchar(20) [not null, note: 'Дом/корпус']
+  apartment varchar(20) [note: 'Квартира/офис']
+  postal_code varchar(10) [not null, note: 'Почтовый индекс']
+  country_code char(2) [not null, default: 'RU', note: 'ISO alpha-2 код страны']
+  is_default boolean [not null, default: false, note: 'Адрес по умолчанию']
+  created_at timestamptz [not null, default: `now()`, note: 'Дата добавления адреса']
+
+  indexes {
+    customer_id
+  }
+
+  Note: '[DAMA-DMBOK: Master Data] Адреса доставки клиентов.'
+}
+
+Table categories {
+  id int [pk, increment, note: 'PK категории']
+  name varchar(100) [not null, note: 'Название категории']
+  parent_id int [note: 'Self-FK на родительскую категорию']
+  sort_order int [not null, default: 0, note: 'Порядок сортировки']
+  is_active boolean [not null, default: true, note: 'Активна ли категория']
+
+  Note: '[DAMA-DMBOK: Reference Data] Иерархия категорий каталога.'
+}
+
+Table products {
+  id int [pk, increment, note: 'PK товара']
+  sku varchar(20) [not null, unique, note: 'Уникальный артикул SKU']
+  name varchar(255) [not null, note: 'Название товара']
+  description text [note: 'Описание товара']
+  price numeric(10,2) [not null, note: 'Цена >= 0']
+  category_id int [note: 'FK на categories']
+  brand varchar(100) [note: 'Бренд/издательство']
+  image_url varchar(500) [note: 'URL изображения товара']
+  is_active boolean [not null, default: true, note: 'Доступность товара']
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    category_id
+    sku
+  }
+
+  Note: '[DAMA-DMBOK: Master Data] Каталог товаров.'
+}
+
+Table warehouses {
+  id int [pk, increment, note: 'PK склада']
+  name varchar(100) [not null, note: 'Название склада']
+  location varchar(255) [note: 'Адрес/локация склада']
+
+  Note: '[DAMA-DMBOK: Master Data] Справочник складов.'
+}
+
+Table inventory {
+  id int [pk, increment, note: 'PK записи остатка']
+  product_id int [not null, note: 'FK на products']
+  warehouse_id int [not null, note: 'FK на warehouses']
+  quantity int [not null, default: 0, note: 'Текущий остаток, >= 0']
+  min_level int [not null, default: 5, note: 'Минимальный уровень остатка']
+  updated_at timestamptz [not null, default: `now()`, note: 'Дата обновления']
+
+  indexes {
+    (product_id, warehouse_id) [unique]
+  }
+
+  Note: '[DAMA-DMBOK: Transactional Data] Оперативные остатки по складам.'
+}
+
+Table carts {
+  id int [pk, increment, note: 'PK корзины']
+  customer_id int [note: 'FK на customers, NULL для гостя']
+  session_id varchar(100) [note: 'ID гостевой сессии']
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  Note: '[DAMA-DMBOK: Transactional Data] Корзины покупок.'
+}
+
+Table cart_items {
+  id int [pk, increment, note: 'PK позиции корзины']
+  cart_id int [not null, note: 'FK на carts']
+  product_id int [not null, note: 'FK на products']
+  quantity int [not null, note: 'Количество > 0']
+
+  indexes {
+    (cart_id, product_id) [unique]
+  }
+
+  Note: '[DAMA-DMBOK: Transactional Data] Позиции корзины.'
+}
+
+Table orders {
+  order_id varchar(20) [pk, note: 'Бизнес-ID заказа']
+  customer_id int [not null, note: 'FK на customers']
+  status varchar(20) [not null, default: 'created', note: 'created|paid|processing|shipped|delivered|cancelled']
+  is_paid boolean [not null, default: false, note: 'Флаг оплаты']
+  comment text [note: 'Комментарий к заказу']
+  source varchar(20) [note: 'Источник: web/mobile/...']
+  ip varchar(45) [note: 'IP клиента']
+  tags text[] [note: 'Теги заказа']
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    customer_id
+    status
+    created_at
+  }
+
+  Note: '[DAMA-DMBOK: Transactional Data] Заказы клиентов.'
+}
+
+Table order_items {
+  id int [pk, increment, note: 'PK позиции заказа']
+  order_id varchar(20) [not null, note: 'FK на orders']
+  product_id varchar(20) [not null, note: 'SKU/ID товара на момент заказа']
+  name varchar(255) [not null, note: 'Название товара в snapshot']
+  quantity int [not null, note: 'Количество > 0']
+  price numeric(10,2) [not null, note: 'Цена >= 0']
+  in_stock boolean [not null, default: true, note: 'Наличие при обработке']
+
+  indexes {
+    order_id
+  }
+
+  Note: '[DAMA-DMBOK: Transactional Data] Позиции заказов (snapshot).'
+}
+
+Table payments {
+  id int [pk, increment, note: 'PK платежа']
+  order_id varchar(20) [not null, note: 'FK на orders']
+  method varchar(20) [not null, note: 'card|cash|sbp|wallet']
+  total numeric(10,2) [not null, note: 'Сумма платежа > 0']
+  currency char(3) [not null, default: 'RUB', note: 'ISO 4217 валюта']
+  paid_at timestamptz [note: 'Дата подтверждения оплаты']
+
+  indexes {
+    order_id
+  }
+
+  Note: '[DAMA-DMBOK: Transactional Data] Платежи по заказам.'
+}
+
+Table order_status_history {
+  id int [pk, increment, note: 'PK записи истории']
+  order_id varchar(20) [not null, note: 'FK на orders']
+  status varchar(20) [not null, note: 'Новый статус']
+  changed_at timestamptz [not null, default: `now()`]
+  changed_by varchar(100) [not null, default: 'system']
+  comment text [note: 'Комментарий к смене статуса']
+
+  indexes {
+    order_id
+  }
+
+  Note: '[DAMA-DMBOK: Transactional Data] История статусов заказа.'
+}
+
+Table promotions {
+  id int [pk, increment, note: 'PK акции']
+  code varchar(50) [not null, unique, note: 'Уникальный промокод']
+  type varchar(20) [not null, note: 'percentage|fixed|free_shipping']
+  description varchar(255) [note: 'Описание акции']
+  discount_value numeric(10,2) [not null, note: 'Размер скидки']
+  min_order_sum numeric(10,2) [note: 'Минимальная сумма заказа']
+  start_date timestamptz [not null, note: 'Старт акции']
+  end_date timestamptz [not null, note: 'Окончание акции']
+  is_active boolean [not null, default: true, note: 'Активность акции']
+
+  Note: '[DAMA-DMBOK: Reference Data] Акции и промокоды.'
+}
+
+Table promotion_products {
+  promotion_id int [not null, note: 'FK на promotions']
+  product_id int [not null, note: 'FK на products']
+
+  indexes {
+    (promotion_id, product_id) [pk]
+  }
+
+  Note: '[DAMA-DMBOK: Reference Data] Связь акция-товар.'
+}
+
+Table support_tickets {
+  id int [pk, increment, note: 'PK тикета']
+  customer_id int [note: 'FK на customers']
+  subject varchar(255) [not null, note: 'Тема обращения']
+  message text [not null, note: 'Текст обращения']
+  status varchar(20) [not null, default: 'open', note: 'open|in_progress|resolved|closed']
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    customer_id
+  }
+
+  Note: '[DAMA-DMBOK: Transactional Data] Тикеты поддержки.'
+}
+
+Table customer_segments {
+  id int [pk, increment, note: 'PK сегмента']
+  name varchar(100) [not null, unique, note: 'Уникальное имя сегмента']
+  description text [note: 'Описание сегмента']
+
+  Note: '[DAMA-DMBOK: Reference Data] Справочник клиентских сегментов.'
+}
+
+Table customer_segment_members {
+  segment_id int [not null, note: 'FK на customer_segments']
+  customer_id int [not null, note: 'FK на customers']
+
+  indexes {
+    (segment_id, customer_id) [pk]
+  }
+
+  Note: '[DAMA-DMBOK: Reference Data] Состав клиентских сегментов.'
+}
+
+Table metadata_data_assets {
+  id int [pk, increment, note: 'PK мета-объекта']
+  schema_name varchar(63) [not null, note: 'Имя схемы']
+  object_name varchar(128) [not null, note: 'Имя объекта данных']
+  object_type varchar(20) [not null, note: 'table|view|materialized_view']
+  dama_type varchar(30) [not null, note: 'Master Data|Transactional|Reference|Metadata|Analytical']
+  business_owner varchar(100) [note: 'Бизнес-владелец']
+  data_steward varchar(100) [note: 'Ответственный data steward']
+  description text [note: 'Описание объекта']
+  refresh_frequency varchar(50) [note: 'Частота обновления']
+  contains_pii boolean [not null, default: false, note: 'Содержит PII']
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (schema_name, object_name, object_type) [unique]
+    dama_type
+  }
+
+  Note: '[DAMA-DMBOK: Metadata] Реестр объектов данных.'
+}
+
+Table metadata_data_elements {
+  id int [pk, increment, note: 'PK элемента данных']
+  asset_id int [not null, note: 'FK на metadata_data_assets']
+  column_name varchar(128) [not null, note: 'Физическое имя колонки']
+  logical_name varchar(255) [note: 'Логическое имя атрибута']
+  business_definition text [note: 'Бизнес-определение']
+  source_system varchar(100) [note: 'Система-источник']
+  is_nullable boolean [note: 'Допускает NULL']
+  pii_class varchar(20) [not null, default: 'none', note: 'none|low|medium|high']
+  sample_format varchar(255) [note: 'Формат/пример значения']
+  dq_expectation text [note: 'Ожидание по качеству']
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (asset_id, column_name) [unique]
+    asset_id
+  }
+
+  Note: '[DAMA-DMBOK: Metadata] Словарь атрибутов данных.'
+}
+
+Table metadata_data_quality_rules {
+  id int [pk, increment, note: 'PK правила качества']
+  asset_id int [not null, note: 'FK на metadata_data_assets']
+  column_name varchar(128) [note: 'Колонка; NULL для правила уровня объекта']
+  rule_name varchar(150) [not null, note: 'Название правила']
+  rule_type varchar(30) [not null, note: 'completeness|validity|uniqueness|consistency|timeliness|integrity']
+  rule_sql text [not null, note: 'SQL проверки']
+  severity varchar(20) [not null, default: 'warning', note: 'info|warning|critical']
+  threshold_pct numeric(5,2) [note: 'Порог нарушений в %']
+  is_active boolean [not null, default: true, note: 'Активность правила']
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    asset_id
+    is_active
+  }
+
+  Note: '[DAMA-DMBOK: Metadata] Каталог DQ-правил.'
+}
+
+Table analytics.sales_daily {
+  order_date date [note: 'Дата заказа']
+  orders_total bigint [note: 'Заказы за день (без cancelled)']
+  paid_orders bigint [note: 'Оплаченные заказы']
+  items_sold bigint [note: 'Проданные единицы']
+  gross_revenue numeric(14,2) [note: 'Валовая выручка']
+
+  Note: '[DAMA-DMBOK: Analytical Data] VIEW: дневная витрина продаж.'
+}
+
+Table analytics.order_funnel {
+  status varchar(20) [note: 'Статус заказа']
+  orders_count bigint [note: 'Количество заказов в статусе']
+  share_pct numeric(5,2) [note: 'Доля от общего числа заказов']
+
+  Note: '[DAMA-DMBOK: Analytical Data] VIEW: воронка статусов заказов.'
+}
+
+Table analytics.top_products_30d {
+  sku varchar(20) [note: 'Артикул товара']
+  name varchar(255) [note: 'Название товара']
+  category_name varchar(100) [note: 'Категория товара']
+  units_sold bigint [note: 'Количество проданных единиц за 30 дней']
+  revenue numeric(14,2) [note: 'Выручка за 30 дней']
+
+  Note: '[DAMA-DMBOK: Analytical Data] VIEW: топ товаров за 30 дней.'
+}
+
+Table analytics.customer_rfm_snapshot {
+  customer_id int [pk, note: 'ID клиента']
+  last_order_date date [note: 'Дата последнего заказа']
+  recency_days int [note: 'Давность последнего заказа (дней)']
+  frequency_paid_orders bigint [note: 'Количество оплаченных заказов']
+  monetary_total numeric(14,2) [note: 'Сумма оплаченных заказов']
+
+  Note: '[DAMA-DMBOK: Analytical Data] MATERIALIZED VIEW: RFM-срез клиентов.'
+}
+
+Ref: addresses.customer_id > customers.id [delete: cascade]
+Ref: categories.parent_id > categories.id
+Ref: products.category_id > categories.id
+Ref: inventory.product_id > products.id [delete: cascade]
+Ref: inventory.warehouse_id > warehouses.id
+Ref: carts.customer_id > customers.id
+Ref: cart_items.cart_id > carts.id [delete: cascade]
+Ref: cart_items.product_id > products.id
+Ref: orders.customer_id > customers.id
+Ref: order_items.order_id > orders.order_id [delete: cascade]
+Ref: payments.order_id > orders.order_id [delete: cascade]
+Ref: order_status_history.order_id > orders.order_id [delete: cascade]
+Ref: promotion_products.promotion_id > promotions.id [delete: cascade]
+Ref: promotion_products.product_id > products.id [delete: cascade]
+Ref: support_tickets.customer_id > customers.id
+Ref: customer_segment_members.segment_id > customer_segments.id [delete: cascade]
+Ref: customer_segment_members.customer_id > customers.id [delete: cascade]
+Ref: metadata_data_elements.asset_id > metadata_data_assets.id [delete: cascade]
+Ref: metadata_data_quality_rules.asset_id > metadata_data_assets.id [delete: cascade]
+Ref: analytics.customer_rfm_snapshot.customer_id > customers.id

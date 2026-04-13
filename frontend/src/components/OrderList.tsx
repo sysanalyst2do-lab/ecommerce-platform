@@ -4,7 +4,6 @@ import { fetchOrders, deleteOrder } from "../api/orders";
 import type { OrderListItem } from "../types/order";
 import { STATUS_LABELS, STATUS_COLORS } from "../types/order";
 import { StatusBadge } from "./StatusBadge";
-import { CookieDemo } from "./CookieDemo";
 
 export function OrderList() {
   const [orders, setOrders] = useState<OrderListItem[]>([]);
@@ -33,8 +32,6 @@ export function OrderList() {
 
   return (
     <div>
-      <CookieDemo />
-
       <div className="toolbar">
         <h1>Заказы ({total})</h1>
         <div className="toolbar-actions">

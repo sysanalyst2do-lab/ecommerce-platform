@@ -208,6 +208,64 @@ CREATE TABLE customer_segment_members (
     PRIMARY KEY (segment_id, customer_id)
 );
 
+-- ======================== MET ========================
+
+CREATE TABLE metadata_data_assets (
+    id                SERIAL       PRIMARY KEY,
+    schema_name       VARCHAR(63)  NOT NULL,
+    object_name       VARCHAR(128) NOT NULL,
+    object_type       VARCHAR(20)  NOT NULL
+                      CHECK (object_type IN ('table','view','materialized_view')),
+    dama_type         VARCHAR(30)  NOT NULL
+                      CHECK (dama_type IN ('Master Data','Transactional','Reference','Metadata','Analytical')),
+    business_owner    VARCHAR(100),
+    data_steward      VARCHAR(100),
+    description       TEXT,
+    refresh_frequency VARCHAR(50),
+    contains_pii      BOOLEAN      NOT NULL DEFAULT FALSE,
+    created_at        TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    updated_at        TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    UNIQUE (schema_name, object_name, object_type)
+);
+
+CREATE TABLE metadata_data_elements (
+    id                  SERIAL       PRIMARY KEY,
+    asset_id            INTEGER      NOT NULL REFERENCES metadata_data_assets(id) ON DELETE CASCADE,
+    column_name         VARCHAR(128) NOT NULL,
+    logical_name        VARCHAR(255),
+    business_definition TEXT,
+    source_system       VARCHAR(100),
+    is_nullable         BOOLEAN,
+    pii_class           VARCHAR(20)  NOT NULL DEFAULT 'none'
+                        CHECK (pii_class IN ('none','low','medium','high')),
+    sample_format       VARCHAR(255),
+    dq_expectation      TEXT,
+    created_at          TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    updated_at          TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    UNIQUE (asset_id, column_name)
+);
+
+CREATE TABLE metadata_data_quality_rules (
+    id             SERIAL       PRIMARY KEY,
+    asset_id       INTEGER      NOT NULL REFERENCES metadata_data_assets(id) ON DELETE CASCADE,
+    column_name    VARCHAR(128),
+    rule_name      VARCHAR(150) NOT NULL,
+    rule_type      VARCHAR(30)  NOT NULL
+                   CHECK (rule_type IN ('completeness','validity','uniqueness','consistency','timeliness','integrity')),
+    rule_sql       TEXT         NOT NULL,
+    severity       VARCHAR(20)  NOT NULL DEFAULT 'warning'
+                   CHECK (severity IN ('info','warning','critical')),
+    threshold_pct  NUMERIC(5,2),
+    is_active      BOOLEAN      NOT NULL DEFAULT TRUE,
+    created_at     TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    updated_at     TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_metadata_assets_dama_type    ON metadata_data_assets(dama_type);
+CREATE INDEX idx_metadata_elements_asset      ON metadata_data_elements(asset_id);
+CREATE INDEX idx_metadata_rules_asset         ON metadata_data_quality_rules(asset_id);
+CREATE INDEX idx_metadata_rules_active        ON metadata_data_quality_rules(is_active);
+
 -- ============================================================
 -- Documentation (table and column descriptions)
 -- ============================================================
@@ -357,6 +415,48 @@ COMMENT ON COLUMN customer_segments.description IS 'Описание логик�
 COMMENT ON TABLE customer_segment_members IS '[DAMA-DMBOK: Reference Data] Состав сегментов: какие клиенты входят в какие сегменты.';
 COMMENT ON COLUMN customer_segment_members.segment_id IS 'Ссылка на сегмент (customer_segments.id).';
 COMMENT ON COLUMN customer_segment_members.customer_id IS 'Ссылка на клиента (customers.id), входящего в сегмент.';
+
+-- MET
+COMMENT ON TABLE metadata_data_assets IS '[DAMA-DMBOK: Metadata] Реестр объектов данных (таблицы, view, materialized view) с классификацией и владельцами.';
+COMMENT ON COLUMN metadata_data_assets.id IS 'Уникальный идентификатор мета-объекта (PK).';
+COMMENT ON COLUMN metadata_data_assets.schema_name IS 'Имя схемы БД, где расположен объект данных.';
+COMMENT ON COLUMN metadata_data_assets.object_name IS 'Имя объекта данных (таблица, view, materialized view).';
+COMMENT ON COLUMN metadata_data_assets.object_type IS 'Тип объекта данных: table, view, materialized_view.';
+COMMENT ON COLUMN metadata_data_assets.dama_type IS 'Классификация объекта по DAMA-DMBOK: Master/Transactional/Reference/Metadata/Analytical.';
+COMMENT ON COLUMN metadata_data_assets.business_owner IS 'Бизнес-владелец данных (роль или подразделение).';
+COMMENT ON COLUMN metadata_data_assets.data_steward IS 'Ответственный за качество и управление данными (data steward).';
+COMMENT ON COLUMN metadata_data_assets.description IS 'Бизнес-описание назначения объекта.';
+COMMENT ON COLUMN metadata_data_assets.refresh_frequency IS 'Периодичность обновления данных (real-time, hourly, daily и т.д.).';
+COMMENT ON COLUMN metadata_data_assets.contains_pii IS 'Признак наличия персональных данных (PII) в объекте.';
+COMMENT ON COLUMN metadata_data_assets.created_at IS 'Дата и время создания записи в реестре метаданных.';
+COMMENT ON COLUMN metadata_data_assets.updated_at IS 'Дата и время последнего обновления записи в реестре метаданных.';
+
+COMMENT ON TABLE metadata_data_elements IS '[DAMA-DMBOK: Metadata] Словарь элементов данных (атрибутов/колонок) с бизнес-определениями и PII-классом.';
+COMMENT ON COLUMN metadata_data_elements.id IS 'Уникальный идентификатор элемента данных (PK).';
+COMMENT ON COLUMN metadata_data_elements.asset_id IS 'Ссылка на объект данных из metadata_data_assets.';
+COMMENT ON COLUMN metadata_data_elements.column_name IS 'Физическое имя колонки в БД.';
+COMMENT ON COLUMN metadata_data_elements.logical_name IS 'Логическое (человеко-читаемое) имя атрибута.';
+COMMENT ON COLUMN metadata_data_elements.business_definition IS 'Бизнес-определение смысла атрибута.';
+COMMENT ON COLUMN metadata_data_elements.source_system IS 'Система-источник, из которой поступает значение атрибута.';
+COMMENT ON COLUMN metadata_data_elements.is_nullable IS 'Признак допуска NULL в колонке (по структуре объекта).';
+COMMENT ON COLUMN metadata_data_elements.pii_class IS 'Класс чувствительности персональных данных: none/low/medium/high.';
+COMMENT ON COLUMN metadata_data_elements.sample_format IS 'Типовой формат значения (пример шаблона: email, UUID, ISO date).';
+COMMENT ON COLUMN metadata_data_elements.dq_expectation IS 'Ожидание по качеству данных для данного атрибута.';
+COMMENT ON COLUMN metadata_data_elements.created_at IS 'Дата и время создания записи по атрибуту.';
+COMMENT ON COLUMN metadata_data_elements.updated_at IS 'Дата и время последнего обновления записи по атрибуту.';
+
+COMMENT ON TABLE metadata_data_quality_rules IS '[DAMA-DMBOK: Metadata] Каталог правил качества данных (DQ rules) для объектов и их атрибутов.';
+COMMENT ON COLUMN metadata_data_quality_rules.id IS 'Уникальный идентификатор правила качества данных (PK).';
+COMMENT ON COLUMN metadata_data_quality_rules.asset_id IS 'Ссылка на объект данных, к которому относится правило.';
+COMMENT ON COLUMN metadata_data_quality_rules.column_name IS 'Колонка, к которой применяется правило; NULL, если правило объектного уровня.';
+COMMENT ON COLUMN metadata_data_quality_rules.rule_name IS 'Краткое название правила качества данных.';
+COMMENT ON COLUMN metadata_data_quality_rules.rule_type IS 'Тип правила качества: completeness, validity, uniqueness, consistency, timeliness, integrity.';
+COMMENT ON COLUMN metadata_data_quality_rules.rule_sql IS 'SQL-выражение проверки качества данных.';
+COMMENT ON COLUMN metadata_data_quality_rules.severity IS 'Критичность нарушения правила: info, warning, critical.';
+COMMENT ON COLUMN metadata_data_quality_rules.threshold_pct IS 'Порог допустимой доли нарушений в процентах.';
+COMMENT ON COLUMN metadata_data_quality_rules.is_active IS 'Признак активности правила качества.';
+COMMENT ON COLUMN metadata_data_quality_rules.created_at IS 'Дата и время создания правила.';
+COMMENT ON COLUMN metadata_data_quality_rules.updated_at IS 'Дата и время последнего обновления правила.';
 
 
 -- ============================================================
@@ -595,3 +695,200 @@ INSERT INTO customer_segment_members (segment_id, customer_id) VALUES
     (3, 1),
     (3, 4),
     (4, 6);
+
+-- ============================================================
+-- Analytical Layer (DAMA-DMBOK: Analytical Data)
+-- ============================================================
+
+CREATE SCHEMA analytics;
+COMMENT ON SCHEMA analytics IS 'Аналитический слой (витрины и агрегаты) для BI и управленческой отчетности.';
+
+CREATE VIEW analytics.sales_daily AS
+SELECT
+    DATE_TRUNC('day', o.created_at)::date AS order_date,
+    COUNT(DISTINCT o.order_id) FILTER (WHERE o.status <> 'cancelled') AS orders_total,
+    COUNT(DISTINCT o.order_id) FILTER (WHERE o.is_paid) AS paid_orders,
+    COALESCE(SUM(CASE WHEN o.is_paid THEN oi.quantity ELSE 0 END), 0)::bigint AS items_sold,
+    COALESCE(SUM(CASE WHEN o.is_paid THEN oi.quantity * oi.price ELSE 0 END), 0)::NUMERIC(14,2) AS gross_revenue
+FROM orders o
+LEFT JOIN order_items oi ON oi.order_id = o.order_id
+GROUP BY 1;
+
+COMMENT ON VIEW analytics.sales_daily IS '[DAMA-DMBOK: Analytical Data] Дневная витрина продаж: количество заказов, оплаченные заказы, проданные единицы, валовая выручка.';
+COMMENT ON COLUMN analytics.sales_daily.order_date IS 'Календарная дата заказа.';
+COMMENT ON COLUMN analytics.sales_daily.orders_total IS 'Количество заказов за дату, исключая отмененные.';
+COMMENT ON COLUMN analytics.sales_daily.paid_orders IS 'Количество оплаченных заказов за дату.';
+COMMENT ON COLUMN analytics.sales_daily.items_sold IS 'Количество проданных единиц товара по оплаченным заказам.';
+COMMENT ON COLUMN analytics.sales_daily.gross_revenue IS 'Валовая выручка по оплаченным заказам за дату.';
+
+CREATE VIEW analytics.order_funnel AS
+SELECT
+    o.status,
+    COUNT(*)::bigint AS orders_count,
+    ROUND(100.0 * COUNT(*) / NULLIF((SELECT COUNT(*) FROM orders), 0), 2) AS share_pct
+FROM orders o
+GROUP BY o.status;
+
+COMMENT ON VIEW analytics.order_funnel IS '[DAMA-DMBOK: Analytical Data] Воронка заказов по текущим статусам с долями.';
+COMMENT ON COLUMN analytics.order_funnel.status IS 'Статус заказа.';
+COMMENT ON COLUMN analytics.order_funnel.orders_count IS 'Количество заказов в статусе.';
+COMMENT ON COLUMN analytics.order_funnel.share_pct IS 'Доля заказов в статусе от общего числа заказов, %.';
+
+CREATE VIEW analytics.top_products_30d AS
+SELECT
+    p.sku,
+    p.name,
+    c.name AS category_name,
+    SUM(oi.quantity)::bigint AS units_sold,
+    SUM(oi.quantity * oi.price)::NUMERIC(14,2) AS revenue
+FROM orders o
+JOIN order_items oi ON oi.order_id = o.order_id
+JOIN products p ON p.sku = oi.product_id
+LEFT JOIN categories c ON c.id = p.category_id
+WHERE o.is_paid = TRUE
+  AND o.created_at >= NOW() - INTERVAL '30 days'
+GROUP BY p.sku, p.name, c.name
+ORDER BY revenue DESC, units_sold DESC;
+
+COMMENT ON VIEW analytics.top_products_30d IS '[DAMA-DMBOK: Analytical Data] Топ товаров за последние 30 дней по выручке и количеству.';
+COMMENT ON COLUMN analytics.top_products_30d.sku IS 'Артикул товара.';
+COMMENT ON COLUMN analytics.top_products_30d.name IS 'Название товара.';
+COMMENT ON COLUMN analytics.top_products_30d.category_name IS 'Название категории товара.';
+COMMENT ON COLUMN analytics.top_products_30d.units_sold IS 'Проданное количество за период.';
+COMMENT ON COLUMN analytics.top_products_30d.revenue IS 'Выручка по товару за период.';
+
+CREATE MATERIALIZED VIEW analytics.customer_rfm_snapshot AS
+SELECT
+    o.customer_id,
+    MAX(o.created_at)::date AS last_order_date,
+    (CURRENT_DATE - MAX(o.created_at)::date) AS recency_days,
+    COUNT(DISTINCT o.order_id) FILTER (WHERE o.is_paid) AS frequency_paid_orders,
+    COALESCE(SUM(CASE WHEN o.is_paid THEN oi.quantity * oi.price ELSE 0 END), 0)::NUMERIC(14,2) AS monetary_total
+FROM orders o
+LEFT JOIN order_items oi ON oi.order_id = o.order_id
+GROUP BY o.customer_id;
+
+CREATE UNIQUE INDEX idx_customer_rfm_snapshot_customer
+    ON analytics.customer_rfm_snapshot(customer_id);
+
+COMMENT ON MATERIALIZED VIEW analytics.customer_rfm_snapshot IS '[DAMA-DMBOK: Analytical Data] Срез RFM-показателей по клиентам (Recency, Frequency, Monetary).';
+COMMENT ON COLUMN analytics.customer_rfm_snapshot.customer_id IS 'Идентификатор клиента.';
+COMMENT ON COLUMN analytics.customer_rfm_snapshot.last_order_date IS 'Дата последнего заказа клиента.';
+COMMENT ON COLUMN analytics.customer_rfm_snapshot.recency_days IS 'Давность последнего заказа в днях.';
+COMMENT ON COLUMN analytics.customer_rfm_snapshot.frequency_paid_orders IS 'Количество оплаченных заказов клиента.';
+COMMENT ON COLUMN analytics.customer_rfm_snapshot.monetary_total IS 'Суммарная выручка по клиенту (только оплаченные заказы).';
+
+-- ============================================================
+-- Metadata bootstrap (data dictionary + quality rules)
+-- ============================================================
+
+INSERT INTO metadata_data_assets (
+    schema_name, object_name, object_type, dama_type,
+    business_owner, data_steward, description, refresh_frequency, contains_pii
+) VALUES
+    ('public', 'customers', 'table', 'Master Data', 'CRM Team', 'Data Office', 'Профили покупателей', 'real-time', TRUE),
+    ('public', 'addresses', 'table', 'Master Data', 'CRM Team', 'Data Office', 'Адреса доставки покупателей', 'real-time', TRUE),
+    ('public', 'categories', 'table', 'Reference', 'Catalog Team', 'Data Office', 'Категории товаров', 'on-demand', FALSE),
+    ('public', 'products', 'table', 'Master Data', 'Catalog Team', 'Data Office', 'Карточки товаров', 'real-time', FALSE),
+    ('public', 'warehouses', 'table', 'Master Data', 'Operations Team', 'Data Office', 'Справочник складов', 'on-demand', FALSE),
+    ('public', 'inventory', 'table', 'Transactional', 'Operations Team', 'Data Office', 'Остатки по складам', 'real-time', FALSE),
+    ('public', 'carts', 'table', 'Transactional', 'Ecom Team', 'Data Office', 'Корзины пользователей', 'real-time', FALSE),
+    ('public', 'cart_items', 'table', 'Transactional', 'Ecom Team', 'Data Office', 'Позиции корзин', 'real-time', FALSE),
+    ('public', 'orders', 'table', 'Transactional', 'Ecom Team', 'Data Office', 'Заказы клиентов', 'real-time', TRUE),
+    ('public', 'order_items', 'table', 'Transactional', 'Ecom Team', 'Data Office', 'Позиции заказов', 'real-time', FALSE),
+    ('public', 'payments', 'table', 'Transactional', 'Finance Team', 'Data Office', 'Платежи по заказам', 'real-time', FALSE),
+    ('public', 'order_status_history', 'table', 'Transactional', 'Ecom Team', 'Data Office', 'История статусов заказов', 'real-time', FALSE),
+    ('public', 'promotions', 'table', 'Reference', 'Marketing Team', 'Data Office', 'Акции и промокоды', 'daily', FALSE),
+    ('public', 'promotion_products', 'table', 'Reference', 'Marketing Team', 'Data Office', 'Привязка акций к товарам', 'daily', FALSE),
+    ('public', 'support_tickets', 'table', 'Transactional', 'Support Team', 'Data Office', 'Обращения в поддержку', 'real-time', TRUE),
+    ('public', 'customer_segments', 'table', 'Reference', 'CRM Team', 'Data Office', 'Справочник сегментов', 'daily', FALSE),
+    ('public', 'customer_segment_members', 'table', 'Reference', 'CRM Team', 'Data Office', 'Состав сегментов клиентов', 'daily', FALSE),
+    ('public', 'metadata_data_assets', 'table', 'Metadata', 'Data Office', 'Data Office', 'Реестр объектов данных', 'daily', FALSE),
+    ('public', 'metadata_data_elements', 'table', 'Metadata', 'Data Office', 'Data Office', 'Словарь атрибутов данных', 'daily', FALSE),
+    ('public', 'metadata_data_quality_rules', 'table', 'Metadata', 'Data Office', 'Data Office', 'Правила качества данных', 'daily', FALSE),
+    ('analytics', 'sales_daily', 'view', 'Analytical', 'BI Team', 'Data Office', 'Дневная витрина продаж', 'daily', FALSE),
+    ('analytics', 'order_funnel', 'view', 'Analytical', 'BI Team', 'Data Office', 'Воронка статусов заказов', 'daily', FALSE),
+    ('analytics', 'top_products_30d', 'view', 'Analytical', 'BI Team', 'Data Office', 'Топ товаров за 30 дней', 'daily', FALSE),
+    ('analytics', 'customer_rfm_snapshot', 'materialized_view', 'Analytical', 'BI Team', 'Data Office', 'RFM-срез по клиентам', 'daily', FALSE)
+ON CONFLICT (schema_name, object_name, object_type) DO UPDATE
+SET
+    dama_type = EXCLUDED.dama_type,
+    business_owner = EXCLUDED.business_owner,
+    data_steward = EXCLUDED.data_steward,
+    description = EXCLUDED.description,
+    refresh_frequency = EXCLUDED.refresh_frequency,
+    contains_pii = EXCLUDED.contains_pii,
+    updated_at = NOW();
+
+WITH objects AS (
+    SELECT table_schema AS schema_name, table_name AS object_name
+    FROM information_schema.tables
+    WHERE table_schema IN ('public', 'analytics')
+    UNION
+    SELECT schemaname AS schema_name, matviewname AS object_name
+    FROM pg_matviews
+    WHERE schemaname = 'analytics'
+)
+INSERT INTO metadata_data_elements (
+    asset_id, column_name, logical_name, business_definition,
+    source_system, is_nullable, pii_class, sample_format, dq_expectation
+)
+SELECT
+    a.id AS asset_id,
+    c.column_name,
+    c.column_name AS logical_name,
+    COALESCE(
+        col_description(format('%I.%I', c.table_schema, c.table_name)::regclass, c.ordinal_position),
+        'Автозагрузка из information_schema: требуется уточнение бизнес-определения.'
+    ) AS business_definition,
+    'postgresql' AS source_system,
+    (c.is_nullable = 'YES') AS is_nullable,
+    CASE
+        WHEN c.column_name IN ('email', 'phone', 'ip', 'message') THEN 'high'
+        WHEN c.column_name IN ('name', 'subject', 'city', 'street') THEN 'medium'
+        ELSE 'none'
+    END AS pii_class,
+    c.data_type AS sample_format,
+    CASE
+        WHEN c.is_nullable = 'NO' THEN 'Должно быть заполнено всегда.'
+        ELSE 'Допускается NULL в рамках текущей модели.'
+    END AS dq_expectation
+FROM information_schema.columns c
+JOIN objects o
+  ON o.schema_name = c.table_schema
+ AND o.object_name = c.table_name
+JOIN metadata_data_assets a
+  ON a.schema_name = c.table_schema
+ AND a.object_name = c.table_name
+WHERE c.table_schema IN ('public', 'analytics')
+ON CONFLICT (asset_id, column_name) DO UPDATE
+SET
+    business_definition = EXCLUDED.business_definition,
+    is_nullable = EXCLUDED.is_nullable,
+    pii_class = EXCLUDED.pii_class,
+    sample_format = EXCLUDED.sample_format,
+    dq_expectation = EXCLUDED.dq_expectation,
+    updated_at = NOW();
+
+INSERT INTO metadata_data_quality_rules (
+    asset_id, column_name, rule_name, rule_type, rule_sql, severity, threshold_pct, is_active
+)
+SELECT id, 'email', 'Customers email must be unique', 'uniqueness',
+       'SELECT email FROM customers GROUP BY email HAVING COUNT(*) > 1', 'critical', 0.00, TRUE
+FROM metadata_data_assets
+WHERE schema_name = 'public' AND object_name = 'customers' AND object_type = 'table'
+UNION ALL
+SELECT id, 'status', 'Orders status must be in business lifecycle', 'validity',
+       'SELECT order_id FROM orders WHERE status NOT IN (''created'',''paid'',''processing'',''shipped'',''delivered'',''cancelled'')', 'critical', 0.00, TRUE
+FROM metadata_data_assets
+WHERE schema_name = 'public' AND object_name = 'orders' AND object_type = 'table'
+UNION ALL
+SELECT id, 'quantity', 'Order item quantity must be positive', 'validity',
+       'SELECT id FROM order_items WHERE quantity <= 0', 'critical', 0.00, TRUE
+FROM metadata_data_assets
+WHERE schema_name = 'public' AND object_name = 'order_items' AND object_type = 'table'
+UNION ALL
+SELECT id, 'paid_orders', 'Paid orders should not exceed total orders', 'consistency',
+       'SELECT order_date FROM analytics.sales_daily WHERE paid_orders > orders_total', 'warning', 0.00, TRUE
+FROM metadata_data_assets
+WHERE schema_name = 'analytics' AND object_name = 'sales_daily' AND object_type = 'view';

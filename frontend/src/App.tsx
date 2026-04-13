@@ -18,7 +18,10 @@ function AppLayout() {
         <div className="header-left">
           <img className="header-cat" src={devStandImage} alt="Dev stand cat" />
         </div>
-        <a href="/" className="logo logo-centered">E-commerce Orders</a>
+        <a href="/" className="brand-block logo-centered">
+          <span className="brand-title">ITea Library</span>
+          <span className="brand-subtitle">E-commerce Orders</span>
+        </a>
         <div className="header-right">
           <nav>
             <a href="/docs" target="_blank" rel="noopener">OpenAPI Docs</a>

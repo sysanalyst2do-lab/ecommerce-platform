@@ -8,6 +8,9 @@
   --border: #e5e7eb;
   --primary: #2563eb;
   --primary-hover: #1d4ed8;
+  --brand-purple: #6d28d9;
+  --brand-purple-deep: #5b21b6;
+  --brand-purple-soft: #8b5cf6;
   --danger: #dc2626;
   --radius: 8px;
 }
@@ -75,7 +78,33 @@ body {
 }
 .header-left { justify-self: start; min-height: 56px; display: flex; align-items: center; }
 .header-right { justify-self: end; display: flex; align-items: center; }
-.logo { font-size: 1.25rem; font-weight: 700; color: var(--text); text-decoration: none; }
+.brand-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  text-decoration: none;
+}
+.brand-title {
+  font-size: clamp(1.5rem, 4vw, 2.15rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  background: linear-gradient(120deg, var(--brand-purple-deep) 0%, var(--brand-purple) 45%, var(--brand-purple-soft) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.brand-block:hover .brand-title {
+  filter: brightness(1.06);
+}
+.brand-subtitle {
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
 .logo-centered { justify-self: center; text-align: center; }
 nav a { color: var(--primary); text-decoration: none; font-size: 0.9rem; }
 .header-cat {

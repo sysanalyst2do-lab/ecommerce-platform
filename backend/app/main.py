@@ -8,7 +8,9 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .routers import cookies, orders
 
-logger = logging.getLogger("app.http")
+logger = logging.getLogger("uvicorn.error")
+if logger.level > logging.INFO:
+    logger.setLevel(logging.INFO)
 
 app = FastAPI(
     title="E-commerce Orders API",

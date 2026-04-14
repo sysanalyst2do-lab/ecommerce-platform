@@ -1,6 +1,6 @@
 # HTTPS (Let's Encrypt) и прокси на Vite. Домен должен указывать A-записью на этот сервер.
 # Порты 80 и 443 должны быть открыты (ufw + панель облака).
 
-demo2dev.ru, www.demo2dev.ru {
+demo2dev.ru {
 	reverse_proxy frontend:3000
 }

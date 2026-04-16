@@ -1,10 +1,13 @@
 import os
 import logging
+from pathlib import Path
 from time import perf_counter
 from uuid import uuid4
 
 from fastapi import FastAPI, Request
+from fastapi.openapi.docs import get_redoc_html, get_swagger_ui_html
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 
 from .routers import cookies, orders
 
@@ -16,9 +19,13 @@ app = FastAPI(
     title="E-commerce Orders API",
     description="Модуль управления заказами e-commerce платформы",
     version="1.0.0",
-    docs_url="/docs",
-    redoc_url="/redoc",
+    docs_url=None,
+    redoc_url=None,
+    openapi_url=None,
 )
+
+ROOT_DIR = Path(__file__).resolve().parents[2]
+OPENAPI_FILE = ROOT_DIR / "openapi.yaml"
 
 _default_cors = "http://localhost:3000,https://demo2dev.ru,https://www.demo2dev.ru"
 _cors_origins = [
@@ -85,6 +92,27 @@ async def log_http_requests(request: Request, call_next):
 
 app.include_router(orders.router)
 app.include_router(cookies.router)
+
+
+@app.get("/openapi.yaml", include_in_schema=False)
+def openapi_yaml():
+    return FileResponse(OPENAPI_FILE, media_type="application/yaml")
+
+
+@app.get("/docs", include_in_schema=False)
+def custom_swagger():
+    return get_swagger_ui_html(
+        openapi_url="/openapi.yaml",
+        title="E-commerce Orders API - Swagger UI",
+    )
+
+
+@app.get("/redoc", include_in_schema=False)
+def custom_redoc():
+    return get_redoc_html(
+        openapi_url="/openapi.yaml",
+        title="E-commerce Orders API - ReDoc",
+    )
 
 
 @app.get("/health", tags=["system"])

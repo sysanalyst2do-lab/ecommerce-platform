@@ -1,0 +1,833 @@
+openapi: 3.1.0
+info:
+  title: E-commerce Orders API
+  description: >
+    Модуль управления заказами e-commerce платформы.
+
+    Этот файл — “человеческая” спецификация API в YAML.
+    В бекенде (FastAPI) документация также доступна по `/docs` (Swagger UI) и `/redoc` (ReDoc).
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8000
+    description: Локальная разработка
+
+tags:
+  - name: orders
+    description: Операции с заказами (CRUD + смена статуса)
+  - name: cookies-demo
+    description: Учебные эндпоинты для демонстрации cookie (сессия, csrf, корзина, настройки)
+  - name: system
+    description: Служебные методы (healthcheck)
+
+paths:
+  /api/v1/orders:
+    get:
+      tags: [orders]
+      operationId: listOrders
+      summary: Список заказов
+      description: >
+        Возвращает список заказов с пагинацией.
+        Можно фильтровать по статусу и по клиенту.
+        В ответе для каждого заказа возвращается краткая информация (без позиций и расширенных данных клиента).
+      parameters:
+        - name: status
+          in: query
+          required: false
+          description: Фильтр по статусу заказа.
+          schema:
+            $ref: "#/components/schemas/OrderStatus"
+        - name: customer_id
+          in: query
+          required: false
+          description: Фильтр по ID клиента.
+          schema:
+            type: integer
+            minimum: 1
+        - name: limit
+          in: query
+          required: false
+          description: Количество записей на страницу (макс. 100).
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+        - name: offset
+          in: query
+          required: false
+          description: Смещение (кол-во записей, которые нужно пропустить).
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+      responses:
+        "200":
+          $ref: "#/components/responses/OrderListResponse"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+    post:
+      tags: [orders]
+      operationId: createOrder
+      summary: Создать заказ
+      description: >
+        Создаёт новый заказ для существующего клиента.
+        В теле можно передать комментарий, источник, теги, позиции заказа и (опционально) информацию об оплате.
+
+        - Если клиент не найден — вернётся `400 VALIDATION_ERROR`.
+      requestBody:
+        $ref: "#/components/requestBodies/CreateOrderRequest"
+      responses:
+        "201":
+          $ref: "#/components/responses/OrderCreatedResponse"
+        "400":
+          description: Ошибка бизнес-валидации (например, клиента не существует)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                customerNotFound:
+                  summary: Клиент не найден
+                  value:
+                    error: VALIDATION_ERROR
+                    message: "Клиент 999 не найден"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  /api/v1/orders/{order_id}:
+    get:
+      tags: [orders]
+      operationId: getOrder
+      summary: Получить заказ
+      description: >
+        Возвращает детальную карточку заказа: клиента, позиции, мета-поля и оплату (если есть).
+      parameters:
+        - name: order_id
+          in: path
+          required: true
+          description: Идентификатор заказа (например, `ORD-2026-1A2B`).
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+              examples:
+                sample:
+                  summary: Пример ответа
+                  value:
+                    order_id: "ORD-2026-1A2B"
+                    created_at: "2026-04-16T10:00:00Z"
+                    updated_at: "2026-04-16T10:00:00Z"
+                    status: "processing"
+                    is_paid: true
+                    comment: "Доставить после 18:00"
+                    meta:
+                      source: "web"
+                      ip: "203.0.113.10"
+                      tags: ["gift", "priority"]
+                    customer:
+                      id: 11
+                      name: "Мария Иванова"
+                      email: "maria@example.com"
+                      phone: null
+                    items:
+                      - product_id: "SKU-2"
+                        name: "Кроссовки"
+                        quantity: 1
+                        price: 2590.5
+                        in_stock: true
+                    payment:
+                      method: "card"
+                      total: 2590.5
+                      currency: "RUB"
+                      paid_at: "2026-04-16T10:05:00Z"
+        "404":
+          description: Заказ не найден
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                notFound:
+                  summary: Нет такого заказа
+                  value:
+                    error: NOT_FOUND
+                    message: "Заказ ORD-2026-XXXX не найден"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+    delete:
+      tags: [orders]
+      operationId: deleteOrder
+      summary: Удалить заказ
+      description: >
+        Удаляет заказ по `order_id`.
+        При успехе возвращает `204 No Content`.
+      parameters:
+        - name: order_id
+          in: path
+          required: true
+          description: Идентификатор заказа.
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Заказ удалён
+        "404":
+          description: Заказ не найден
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  /api/v1/orders/{order_id}/status:
+    patch:
+      tags: [orders]
+      operationId: updateOrderStatus
+      summary: Сменить статус заказа
+      description: >
+        Меняет статус заказа.
+        Переходы ограничены “жизненным циклом” (например, нельзя перейти из `shipped` обратно в `processing`).
+
+        Возможные статусы:
+        `created → paid → processing → shipped → delivered`, а также `cancelled`.
+      parameters:
+        - name: order_id
+          in: path
+          required: true
+          description: Идентификатор заказа.
+          schema:
+            type: string
+      requestBody:
+        $ref: "#/components/requestBodies/UpdateOrderStatusRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/StatusUpdatedResponse"
+        "404":
+          description: Заказ не найден
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                notFound:
+                  summary: Нет такого заказа
+                  value:
+                    error: NOT_FOUND
+                    message: "Заказ ORD-2026-XXXX не найден"
+        "422":
+          description: Неверный статус или запрещённый переход
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                invalidStatus:
+                  summary: Неизвестный статус
+                  value:
+                    error: INVALID_STATUS
+                    message: "Неизвестный статус 'unknown'"
+                invalidTransition:
+                  summary: Запрещённый переход
+                  value:
+                    error: INVALID_TRANSITION
+                    message: "Нельзя перевести заказ из 'shipped' в 'processing'"
+
+  /api/v1/cookies/status:
+    get:
+      tags: [cookies-demo]
+      operationId: cookieStatus
+      summary: Проверить текущие cookie
+      description: >
+        Возвращает, какие cookie присутствуют в запросе, а также их текущие значения
+        (если это уместно для демо).
+      responses:
+        "200":
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CookieStatus"
+              examples:
+                sample:
+                  summary: Пример ответа
+                  value:
+                    sessionId_present: true
+                    csrfToken_present: true
+                    cartId: "cart-12ab34cd56ef"
+                    locale: "ru-RU"
+                    lastVisitedItem: "SKU-2"
+                    cookieConsent: "necessary_only"
+
+  /api/v1/cookies/session/start:
+    post:
+      tags: [cookies-demo]
+      operationId: startSession
+      summary: Начать учебную сессию
+      description: >
+        Устанавливает cookie `sessionId` (HttpOnly) и `csrfToken`.
+        Нужен для демонстрации того, как сервер выставляет cookie.
+      responses:
+        "200":
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+              examples:
+                ok:
+                  value: { message: "Учебная сессия создана (sessionId + csrfToken)." }
+
+  /api/v1/cookies/session/end:
+    post:
+      tags: [cookies-demo]
+      operationId: endSession
+      summary: Завершить учебную сессию
+      description: >
+        Удаляет cookie `sessionId` и `csrfToken`.
+      responses:
+        "200":
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+              examples:
+                ok:
+                  value: { message: "Учебная сессия завершена (sessionId + csrfToken удалены)." }
+
+  /api/v1/cookies/cart/ensure:
+    post:
+      tags: [cookies-demo]
+      operationId: ensureCart
+      summary: Установить/обновить cartId
+      description: >
+        Устанавливает cookie `cartId`, если его нет, или обновляет (в рамках демо).
+      responses:
+        "200":
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+              examples:
+                ok:
+                  value: { message: "cartId установлен/обновлен." }
+
+  /api/v1/cookies/preferences:
+    post:
+      tags: [cookies-demo]
+      operationId: setPreferences
+      summary: Сохранить настройки cookie
+      description: >
+        Сохраняет пользовательские настройки в cookie:
+        локаль, уровень согласия на cookie и (опционально) последний просмотренный товар.
+      requestBody:
+        $ref: "#/components/requestBodies/SetPreferencesRequest"
+      responses:
+        "200":
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+              examples:
+                ok:
+                  value: { message: "Настройки cookie сохранены." }
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  /api/v1/cookies/analytics/disable:
+    post:
+      tags: [cookies-demo]
+      operationId: disableAnalytics
+      summary: Отозвать analytics cookie
+      description: >
+        Удаляет cookie `analytics_id` (если она была установлена).
+        В учебном примере используется для демонстрации “отзыва согласия”.
+      responses:
+        "200":
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+              examples:
+                ok:
+                  value: { message: "analytics_id удален (если был установлен)." }
+
+  /health:
+    get:
+      tags: [system]
+      operationId: health
+      summary: Healthcheck
+      description: >
+        Быстрая проверка, что сервис жив.
+        Удобно для балансировщиков, docker healthcheck и мониторинга.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+              examples:
+                ok:
+                  value: { status: "ok" }
+
+components:
+  requestBodies:
+    CreateOrderRequest:
+      description: >
+        Входная модель для создания заказа.
+        Это не “бизнес-сущность”, а форма запроса: часть полей опциональна.
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [customer_id, items]
+            properties:
+              customer_id:
+                type: integer
+                minimum: 1
+              comment:
+                type: [string, "null"]
+              source:
+                type: [string, "null"]
+              tags:
+                type: [array, "null"]
+                items: { type: string }
+              items:
+                type: array
+                minItems: 1
+                items:
+                  $ref: "#/components/schemas/OrderItem"
+              payment:
+                anyOf:
+                  - $ref: "#/components/schemas/Payment"
+                  - type: "null"
+          examples:
+            minimal:
+              summary: Минимальный заказ (без оплаты)
+              value:
+                customer_id: 10
+                items:
+                  - product_id: "SKU-1"
+                    name: "Футболка"
+                    quantity: 2
+                    price: 799.0
+                    in_stock: true
+            withPayment:
+              summary: Заказ с оплатой
+              value:
+                customer_id: 11
+                comment: "Доставить после 18:00"
+                source: "web"
+                tags: ["gift", "priority"]
+                items:
+                  - product_id: "SKU-2"
+                    name: "Кроссовки"
+                    quantity: 1
+                    price: 2590.5
+                    in_stock: true
+                payment:
+                  method: "card"
+                  total: 2590.5
+                  currency: "RUB"
+
+    UpdateOrderStatusRequest:
+      description: >
+        Форма запроса на смену статуса.
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [status]
+            properties:
+              status:
+                $ref: "#/components/schemas/OrderStatus"
+          examples:
+            toPaid:
+              summary: Перевести в paid
+              value: { status: "paid" }
+            toShipped:
+              summary: Перевести в shipped
+              value: { status: "shipped" }
+
+    SetPreferencesRequest:
+      description: >
+        Форма запроса для сохранения пользовательских cookie-настроек (учебный эндпоинт).
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Preferences"
+          examples:
+            sample:
+              value:
+                locale: "ru-RU"
+                cookie_consent: "necessary_only"
+                last_visited_item: "SKU-2"
+
+  responses:
+    UnprocessableEntity:
+      description: Ошибка валидации запроса (формат/типы/обязательные поля).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ValidationError"
+          examples:
+            invalid:
+              summary: Пример ошибки валидации
+              value:
+                detail:
+                  - loc: ["body", "items", 0, "quantity"]
+                    msg: "Input should be greater than 0"
+                    type: "greater_than"
+
+    OrderListResponse:
+      description: Список заказов (пагинация + total).
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [data, total, limit, offset]
+            properties:
+              data:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OrderSummary"
+              total:
+                type: integer
+                minimum: 0
+              limit:
+                type: integer
+                minimum: 1
+                maximum: 100
+              offset:
+                type: integer
+                minimum: 0
+
+    OrderCreatedResponse:
+      description: Короткий ответ после создания заказа.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [order_id, status, is_paid, created_at]
+            properties:
+              order_id: { type: string }
+              status: { $ref: "#/components/schemas/OrderStatus" }
+              is_paid: { type: boolean }
+              created_at: { type: string, format: date-time }
+
+    StatusUpdatedResponse:
+      description: Результат смены статуса.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [order_id, status, updated_at]
+            properties:
+              order_id: { type: string }
+              status: { $ref: "#/components/schemas/OrderStatus" }
+              updated_at: { type: string, format: date-time }
+
+  schemas:
+    # ----------- Business entities (доменные объекты) -----------
+    OrderStatus:
+      type: string
+      description: Статус заказа.
+      enum: [created, paid, processing, shipped, delivered, cancelled]
+
+    Order:
+      type: object
+      additionalProperties: false
+      required:
+        - order_id
+        - created_at
+        - updated_at
+        - status
+        - is_paid
+        - comment
+        - meta
+        - customer
+        - items
+        - payment
+      properties:
+        order_id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        status:
+          $ref: "#/components/schemas/OrderStatus"
+        is_paid:
+          type: boolean
+        comment:
+          type: [string, "null"]
+        meta:
+          $ref: "#/components/schemas/OrderMeta"
+        customer:
+          $ref: "#/components/schemas/Customer"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrderItem"
+        payment:
+          anyOf:
+            - $ref: "#/components/schemas/Payment"
+            - type: "null"
+
+    OrderSummary:
+      type: object
+      additionalProperties: false
+      required: [order_id, status, is_paid, customer, total, created_at]
+      properties:
+        order_id:
+          type: string
+          example: "ORD-2026-1A2B"
+        status:
+          $ref: "#/components/schemas/OrderStatus"
+        is_paid:
+          type: boolean
+          example: false
+        customer:
+          type: object
+          additionalProperties: false
+          required: [id, name]
+          properties:
+            id: { type: integer, minimum: 1 }
+            name: { type: string }
+        total:
+          type: [number, "null"]
+          format: double
+          description: Итоговая сумма (если есть payment), иначе null.
+          example: 2590.5
+        created_at:
+          type: string
+          format: date-time
+          example: "2026-04-16T10:00:00Z"
+
+    Customer:
+      type: object
+      additionalProperties: false
+      required: [id, name, email, phone]
+      properties:
+        id:
+          type: integer
+          minimum: 1
+          example: 10
+        name:
+          type: string
+          example: "Иван Петров"
+        email:
+          type: string
+          format: email
+          example: "ivan@example.com"
+        phone:
+          type: [string, "null"]
+          example: "+7-999-123-45-67"
+
+    OrderItem:
+      type: object
+      additionalProperties: false
+      required: [product_id, name, quantity, price, in_stock]
+      properties:
+        product_id:
+          type: string
+          example: "SKU-1"
+        name:
+          type: string
+          example: "Футболка"
+        quantity:
+          type: integer
+          minimum: 1
+          example: 2
+        price:
+          type: number
+          format: double
+          minimum: 0
+          example: 799.0
+        in_stock:
+          type: boolean
+          example: true
+
+    Payment:
+      type: object
+      additionalProperties: false
+      required: [method, total, currency, paid_at]
+      properties:
+        method:
+          type: string
+          example: "card"
+        total:
+          type: number
+          format: double
+          example: 2590.5
+        currency:
+          type: string
+          example: "RUB"
+        paid_at:
+          type: [string, "null"]
+          format: date-time
+          example: "2026-04-16T10:05:00Z"
+
+    OrderMeta:
+      type: object
+      additionalProperties: false
+      required: [source, ip, tags]
+      properties:
+        source:
+          type: [string, "null"]
+          description: Источник заказа (например, web, mobile, partner).
+          example: "web"
+        ip:
+          type: [string, "null"]
+          description: IP адрес клиента (если известен).
+          example: "203.0.113.10"
+        tags:
+          type: [array, "null"]
+          description: Пользовательские теги.
+          items:
+            type: string
+          example: ["gift", "priority"]
+
+    # ----------- Cookies demo objects -----------
+    Preferences:
+      type: object
+      additionalProperties: false
+      properties:
+        locale:
+          type: string
+          default: "ru-RU"
+          description: Локаль интерфейса.
+        cookie_consent:
+          type: string
+          default: "necessary_only"
+          description: >
+            Уровень согласия на cookie (учебное поле; значения не валидируются enum-ом в бекенде).
+        last_visited_item:
+          type: [string, "null"]
+          description: Последний просмотренный товар (опционально).
+
+    CookieStatus:
+      type: object
+      additionalProperties: false
+      required:
+        - sessionId_present
+        - csrfToken_present
+        - cartId
+        - locale
+        - lastVisitedItem
+        - cookieConsent
+      properties:
+        sessionId_present:
+          type: boolean
+          description: Присутствует ли cookie `sessionId`.
+        csrfToken_present:
+          type: boolean
+          description: Присутствует ли cookie `csrfToken`.
+        cartId:
+          type: [string, "null"]
+          description: Значение cookie `cartId` (если есть).
+        locale:
+          type: [string, "null"]
+          description: Значение cookie `locale` (если есть).
+        lastVisitedItem:
+          type: [string, "null"]
+          description: Значение cookie `lastVisitedItem` (если есть).
+        cookieConsent:
+          type: [string, "null"]
+          description: Значение cookie `cookieConsent` (если есть).
+
+    # ----------- Common / technical -----------
+    MessageResponse:
+      type: object
+      additionalProperties: false
+      required: [message]
+      properties:
+        message:
+          type: string
+          example: "ok"
+
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required: [error, message]
+      properties:
+        error:
+          type: string
+          description: Машиночитаемый код ошибки.
+          example: NOT_FOUND
+        message:
+          type: string
+          description: Человекочитаемое сообщение.
+          example: "Заказ ORD-2026-XXXX не найден"
+
+    ValidationError:
+      type: object
+      description: Стандартная ошибка валидации FastAPI/Pydantic.
+      properties:
+        detail:
+          type: array
+          items:
+            type: object
+            properties:
+              loc:
+                type: array
+                items:
+                  anyOf:
+                    - type: string
+                    - type: integer
+              msg:
+                type: string
+              type:
+                type: string
+
+    HealthResponse:
+      type: object
+      additionalProperties: false
+      required: [status]
+      properties:
+        status:
+          type: string
+          example: ok
+
+x-dto-example:
+  title: Пример DTO (Data Transfer Object)
+  description: >
+    DTO — это “объект для передачи данных”, то есть форма запроса/ответа,
+    заточенная под конкретную операцию API. DTO не обязано 1-в-1 совпадать
+    с доменной сущностью (`Order`, `Customer` и т.д.).
+
+    В этом проекте DTO вынесены в `components/requestBodies` и `components/responses`,
+    чтобы в `components/schemas` оставались именно бизнес-сущности.
+
+    Где используется:
+    - `POST /api/v1/orders` принимает DTO запроса `CreateOrderRequest`
+    - и возвращает DTO ответа `OrderCreatedResponse`
+  dto:
+    requestBodyRef: "#/components/requestBodies/CreateOrderRequest"
+    responseRef: "#/components/responses/OrderCreatedResponse"
+  why:
+    - Клиент не должен передавать серверные поля (например, `order_id`, `created_at`, вычисляемый `status`).
+    - Ответ после создания обычно краткий: достаточно вернуть идентификатор и базовый статус, не вытаскивая весь `Order`.

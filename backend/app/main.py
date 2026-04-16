@@ -4,7 +4,7 @@ from pathlib import Path
 from time import perf_counter
 from uuid import uuid4
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.openapi.docs import get_redoc_html, get_swagger_ui_html
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
@@ -24,8 +24,21 @@ app = FastAPI(
     openapi_url=None,
 )
 
-ROOT_DIR = Path(__file__).resolve().parents[2]
-OPENAPI_FILE = ROOT_DIR / "openapi.yaml"
+def _resolve_openapi_file() -> Path:
+    # Priority for container deployments: explicit mount point.
+    candidates = [
+        Path("/app/openapi.yaml"),
+        Path(__file__).resolve().parents[2] / "openapi.yaml",
+        Path(__file__).resolve().parents[1] / "openapi.yaml",
+        Path.cwd() / "openapi.yaml",
+    ]
+    for path in candidates:
+        if path.exists():
+            return path
+    return candidates[0]
+
+
+OPENAPI_FILE = _resolve_openapi_file()
 
 _default_cors = "http://localhost:3000,https://demo2dev.ru,https://www.demo2dev.ru"
 _cors_origins = [
@@ -96,6 +109,8 @@ app.include_router(cookies.router)
 
 @app.get("/openapi.yaml", include_in_schema=False)
 def openapi_yaml():
+    if not OPENAPI_FILE.exists():
+        raise HTTPException(status_code=500, detail="openapi.yaml file is not found on server")
     return FileResponse(OPENAPI_FILE, media_type="application/yaml")
 
 

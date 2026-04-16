@@ -25,6 +25,8 @@ services:
     build: ./backend
     ports:
       - "8000:8000"
+    volumes:
+      - ./openapi.yaml:/app/openapi.yaml:ro
     environment:
       DATABASE_URL: postgresql://ecommerce:secret@db:5432/ecommerce
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,https://demo2dev.ru,https://www.demo2dev.ru}

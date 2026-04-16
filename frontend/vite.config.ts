@@ -22,6 +22,7 @@ export default defineConfig({
       "/api": process.env.API_URL || "http://localhost:8000",
       "/docs": process.env.API_URL || "http://localhost:8000",
       "/redoc": process.env.API_URL || "http://localhost:8000",
+      "/openapi.yaml": process.env.API_URL || "http://localhost:8000",
       "/openapi.json": process.env.API_URL || "http://localhost:8000",
     },
   },

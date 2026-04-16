@@ -9,8 +9,10 @@ info:
   version: 1.0.0
 
 servers:
+  - url: https://demo2dev.ru
+    description: Production
   - url: http://localhost:8000
-    description: Локальная разработка
+    description: Local development
 
 tags:
   - name: orders

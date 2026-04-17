@@ -2,7 +2,16 @@
 # Порты 80 и 443 должны быть открыты (ufw + панель облака).
 
 demo2dev.ru {
+	redir /db /db/ 308
+
 	handle /db* {
+		# Временная базовая защита перед экраном логина CloudBeaver.
+		# user: dbadmin
+		# password: hiccup
+		# Обязательно смените перед production rollout.
+		basic_auth {
+			dbadmin $2a$14$Zkx19XLiW6VYouLHR5NmfOFU0z2GTNmpkT/5qqR7hx4IjWJPDhjvG
+		}
 		reverse_proxy cloudbeaver:8978
 	}
 

@@ -55,6 +55,7 @@ services:
       CB_SERVER_NAME: ecommerce-db
       CB_ADMIN_NAME: ${CLOUDBEAVER_ADMIN_NAME:-admin}
       CB_ADMIN_PASSWORD: ${CLOUDBEAVER_ADMIN_PASSWORD:-change_me_please}
+      CLOUDBEAVER_ROOT_URI: /db/
     volumes:
       - cloudbeaver_workspace:/opt/cloudbeaver/workspace
     depends_on:

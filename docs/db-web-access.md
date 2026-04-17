@@ -27,16 +27,61 @@ docker compose up -d --build cloudbeaver caddy
 ## Первый вход в CloudBeaver
 
 1. Открой `https://demo2dev.ru/db`.
-2. Войди под админом CloudBeaver:
+2. Пройди basic auth reverse proxy:
+   - login: `dbadmin`
+   - password: `hiccup`
+3. После этого откроется страница CloudBeaver.
+4. Войди под админом CloudBeaver:
    - логин: `CLOUDBEAVER_ADMIN_NAME`
    - пароль: `CLOUDBEAVER_ADMIN_PASSWORD`
-3. Создай подключение PostgreSQL:
+5. Создай подключение PostgreSQL:
    - Host: `db`
    - Port: `5432`
    - Database: `ecommerce`
    - User: `ecom_tech_ro`
    - Password: значение `TECH_RO_PASSWORD`
-4. Сохрани подключение как `Ecommerce (read-only)`.
+6. Сохрани подключение как `Ecommerce (read-only)`.
+
+## Смена basic auth перед production
+
+Текущая пара (`dbadmin` / `hiccup`) демонстрационная и должна быть заменена.
+
+1. Сгенерируй bcrypt-хэш пароля:
+
+```bash
+caddy hash-password --plaintext "my_strong_password"
+```
+
+2. Обнови блок `basic_auth` в `deploy/Caddyfile`:
+
+```caddy
+basic_auth {
+    my_user <bcrypt_hash>
+}
+```
+
+3. Перезапусти Caddy:
+
+```bash
+docker compose up -d --build caddy
+```
+
+## Если /db открывает главную страницу сайта
+
+Это означает, что CloudBeaver не настроен на работу под path-prefix `/db/`.
+
+Проверь:
+
+1. В `docker-compose.yml` для `cloudbeaver` есть:
+   - `CLOUDBEAVER_ROOT_URI: /db/`
+2. В `deploy/Caddyfile` используется:
+   - `redir /db /db/ 308`
+   - `handle /db* { reverse_proxy cloudbeaver:8978 }`
+3. После правок выполнен перезапуск:
+
+```bash
+docker compose up -d --build cloudbeaver caddy
+```
 
 ## Рекомендации по безопасности
 

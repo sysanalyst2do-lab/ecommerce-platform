@@ -20,6 +20,7 @@ export default defineConfig({
       : {}),
     proxy: {
       "/api": process.env.API_URL || "http://localhost:8000",
+      "/health": process.env.API_URL || "http://localhost:8000",
       "/docs": process.env.API_URL || "http://localhost:8000",
       "/redoc": process.env.API_URL || "http://localhost:8000",
       "/openapi.yaml": process.env.API_URL || "http://localhost:8000",

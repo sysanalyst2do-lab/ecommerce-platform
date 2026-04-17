@@ -372,8 +372,68 @@ paths:
       operationId: health
       summary: Healthcheck
       description: >
-        Быстрая проверка, что сервис жив.
-        Удобно для балансировщиков, docker healthcheck и мониторинга.
+        Проверка доступности сервиса и выбранных зависимостей.
+        Поддерживает быстрый режим (`basic`) и расширенный (`full`) с деталями по проверкам.
+      parameters:
+        - name: level
+          in: query
+          required: false
+          description: >
+            Режим ответа.
+            `basic` — только `{status: ok}` (если не указан `check`).
+            `full` — детальный ответ с `checks`.
+          schema:
+            type: string
+            enum: [basic, full]
+            default: basic
+        - name: check
+          in: query
+          required: false
+          description: >
+            Список проверок через запятую.
+            Доступно: `db`, `openapi`.
+            Пример: `db,openapi`.
+          schema:
+            type: string
+            example: db,openapi
+        - name: timeout_ms
+          in: query
+          required: false
+          description: >
+            Порог таймаута для проверки (в миллисекундах).
+            Если проверка дольше порога, она помечается как `down`.
+          schema:
+            type: integer
+            minimum: 100
+            maximum: 10000
+            default: 1000
+        - name: format
+          in: query
+          required: false
+          description: Формат ответа (`json` или простой текст `plain`).
+          schema:
+            type: string
+            enum: [json, plain]
+            default: json
+        - name: verbose
+          in: query
+          required: false
+          description: >
+            Детализация результатов проверок.
+            Если `false`, для каждой проверки возвращается только статус.
+          schema:
+            type: boolean
+            default: true
+        - name: include
+          in: query
+          required: false
+          description: >
+            Дополнительные метаданные через запятую.
+            Доступно: `version`, `uptime`, `build`.
+            Пример: `version,uptime`.
+          schema:
+            type: string
+            example: version,uptime
       responses:
         "200":
           description: OK
@@ -382,8 +442,43 @@ paths:
               schema:
                 $ref: "#/components/schemas/HealthResponse"
               examples:
-                ok:
+                basic:
+                  summary: Быстрый ответ
                   value: { status: "ok" }
+                full:
+                  summary: Детальный ответ с проверками
+                  value:
+                    status: "ok"
+                    level: "full"
+                    checked_at: "2026-04-16T20:00:00+00:00"
+                    checked: ["db", "openapi"]
+                    timeout_ms: 1000
+                    checks:
+                      db:
+                        status: "ok"
+                        latency_ms: 6.41
+                      openapi:
+                        status: "ok"
+                        latency_ms: 0.12
+                    version: "1.0.0"
+                    uptime_sec: 245
+            text/plain:
+              schema:
+                type: string
+              examples:
+                plain:
+                  summary: Текстовый формат
+                  value: |
+                    status=ok
+                    level=full
+                    checked=db,openapi
+                    timeout_ms=1000
+                    check.db=ok latency_ms=5.12
+                    check.openapi=ok latency_ms=0.08
+                    version=1.0.0
+                    uptime_sec=245
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
 
 components:
   requestBodies:
@@ -807,12 +902,54 @@ components:
 
     HealthResponse:
       type: object
-      additionalProperties: false
       required: [status]
       properties:
         status:
           type: string
+          description: Итоговый статус healthcheck.
+          enum: [ok, degraded]
           example: ok
+        level:
+          type: string
+          enum: [basic, full]
+          description: Режим формирования ответа.
+        checked_at:
+          type: string
+          format: date-time
+          description: Время выполнения проверки (UTC).
+        checked:
+          type: array
+          description: Перечень выполненных проверок.
+          items:
+            type: string
+            enum: [db, openapi]
+        timeout_ms:
+          type: integer
+          minimum: 100
+          maximum: 10000
+        version:
+          type: string
+          description: Версия API (если запрошена через include=version).
+        build:
+          type: string
+          description: Идентификатор сборки из APP_BUILD (если запрошен include=build).
+        uptime_sec:
+          type: integer
+          minimum: 0
+          description: Uptime процесса в секундах (если запрошен include=uptime).
+        checks:
+          type: object
+          description: Результаты по каждой проверке.
+          additionalProperties:
+            type: object
+            properties:
+              status:
+                type: string
+                enum: [ok, down]
+              latency_ms:
+                type: number
+              error:
+                type: string
 
 x-dto-example:
   title: Пример DTO (Data Transfer Object)

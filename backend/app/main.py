@@ -1,14 +1,18 @@
 import os
 import logging
+from datetime import datetime, timezone
 from pathlib import Path
 from time import perf_counter
+from typing import Literal
 from uuid import uuid4
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.openapi.docs import get_redoc_html, get_swagger_ui_html
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, PlainTextResponse
+from sqlalchemy import text
 
+from .database import SessionLocal
 from .routers import cookies, orders
 
 logger = logging.getLogger("uvicorn.error")
@@ -39,6 +43,7 @@ def _resolve_openapi_file() -> Path:
 
 
 OPENAPI_FILE = _resolve_openapi_file()
+APP_STARTED_AT = datetime.now(timezone.utc)
 
 _default_cors = "http://localhost:3000,https://demo2dev.ru,https://www.demo2dev.ru"
 _cors_origins = [
@@ -131,5 +136,123 @@ def custom_redoc():
 
 
 @app.get("/health", tags=["system"])
-def health():
-    return {"status": "ok"}
+def health(
+    level: Literal["basic", "full"] = Query(default="basic"),
+    check: str | None = Query(default=None, description="CSV: db,openapi"),
+    timeout_ms: int = Query(default=1000, ge=100, le=10000),
+    output_format: Literal["json", "plain"] = Query(default="json", alias="format"),
+    verbose: bool = Query(default=True),
+    include: str | None = Query(default=None, description="CSV: version,uptime,build"),
+):
+    available_checks = {"db", "openapi"}
+    available_meta = {"version", "uptime", "build"}
+
+    if include:
+        requested_meta = {item.strip().lower() for item in include.split(",") if item.strip()}
+        unknown_meta = sorted(requested_meta - available_meta)
+        if unknown_meta:
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "error": "INVALID_INCLUDE",
+                    "message": f"Неизвестные include-поля: {', '.join(unknown_meta)}. Доступно: version, uptime, build",
+                },
+            )
+    else:
+        requested_meta = set()
+
+    if level == "basic" and not check:
+        if output_format == "plain":
+            return PlainTextResponse("ok")
+        return {"status": "ok"}
+
+    if check:
+        requested_checks = {item.strip().lower() for item in check.split(",") if item.strip()}
+        unknown = sorted(requested_checks - available_checks)
+        if unknown:
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "error": "INVALID_CHECK",
+                    "message": f"Неизвестные проверки: {', '.join(unknown)}. Доступно: db, openapi",
+                },
+            )
+    else:
+        requested_checks = set(available_checks)
+
+    checks_result: dict[str, dict] = {}
+
+    if "db" in requested_checks:
+        started = perf_counter()
+        try:
+            with SessionLocal() as db:
+                db.execute(text("SELECT 1"))
+            latency_ms = round((perf_counter() - started) * 1000, 2)
+            if latency_ms > timeout_ms:
+                checks_result["db"] = {
+                    "status": "down",
+                    "latency_ms": latency_ms,
+                    "error": f"timeout: {latency_ms}ms > {timeout_ms}ms",
+                }
+            else:
+                checks_result["db"] = {"status": "ok", "latency_ms": latency_ms}
+        except Exception as exc:
+            latency_ms = round((perf_counter() - started) * 1000, 2)
+            checks_result["db"] = {"status": "down", "latency_ms": latency_ms, "error": str(exc)}
+
+    if "openapi" in requested_checks:
+        started = perf_counter()
+        if not OPENAPI_FILE.exists():
+            latency_ms = round((perf_counter() - started) * 1000, 2)
+            checks_result["openapi"] = {
+                "status": "down",
+                "latency_ms": latency_ms,
+                "error": f"file is not found: {OPENAPI_FILE}",
+            }
+        else:
+            latency_ms = round((perf_counter() - started) * 1000, 2)
+            checks_result["openapi"] = {"status": "ok", "latency_ms": latency_ms}
+
+    overall = "ok" if all(item.get("status") == "ok" for item in checks_result.values()) else "degraded"
+    if not verbose:
+        checks_result = {name: {"status": result["status"]} for name, result in checks_result.items()}
+
+    payload = {
+        "status": overall,
+        "level": level,
+        "checked_at": datetime.now(timezone.utc).isoformat(),
+        "checked": sorted(requested_checks),
+        "timeout_ms": timeout_ms,
+        "checks": checks_result,
+    }
+
+    if "version" in requested_meta:
+        payload["version"] = app.version
+    if "build" in requested_meta:
+        payload["build"] = os.getenv("APP_BUILD", "unknown")
+    if "uptime" in requested_meta:
+        payload["uptime_sec"] = int((datetime.now(timezone.utc) - APP_STARTED_AT).total_seconds())
+
+    if output_format == "plain":
+        lines = [
+            f"status={payload['status']}",
+            f"level={payload['level']}",
+            f"checked={','.join(payload['checked'])}",
+            f"timeout_ms={payload['timeout_ms']}",
+        ]
+        for check_name, check_item in payload["checks"].items():
+            check_line = f"check.{check_name}={check_item['status']}"
+            if verbose and "latency_ms" in check_item:
+                check_line += f" latency_ms={check_item['latency_ms']}"
+            if verbose and "error" in check_item:
+                check_line += f" error={check_item['error']}"
+            lines.append(check_line)
+        if "version" in payload:
+            lines.append(f"version={payload['version']}")
+        if "build" in payload:
+            lines.append(f"build={payload['build']}")
+        if "uptime_sec" in payload:
+            lines.append(f"uptime_sec={payload['uptime_sec']}")
+        return PlainTextResponse("\n".join(lines))
+
+    return payload

@@ -2,5 +2,9 @@
 # Порты 80 и 443 должны быть открыты (ufw + панель облака).
 
 demo2dev.ru {
+	handle /db* {
+		reverse_proxy cloudbeaver:8978
+	}
+
 	reverse_proxy frontend:3000
 }

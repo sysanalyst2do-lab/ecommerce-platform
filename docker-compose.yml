@@ -48,6 +48,19 @@ services:
     depends_on:
       - backend
 
+  cloudbeaver:
+    image: dbeaver/cloudbeaver:latest
+    restart: unless-stopped
+    environment:
+      CB_SERVER_NAME: ecommerce-db
+      CB_ADMIN_NAME: ${CLOUDBEAVER_ADMIN_NAME:-admin}
+      CB_ADMIN_PASSWORD: ${CLOUDBEAVER_ADMIN_PASSWORD:-change_me_please}
+    volumes:
+      - cloudbeaver_workspace:/opt/cloudbeaver/workspace
+    depends_on:
+      db:
+        condition: service_healthy
+
   caddy:
     image: caddy:2-alpine
     restart: unless-stopped
@@ -60,6 +73,7 @@ services:
       - caddy_config:/config
     depends_on:
       - frontend
+      - cloudbeaver
 
   dozzle:
     image: amir20/dozzle:latest
@@ -73,3 +87,4 @@ volumes:
   pgdata:
   caddy_data:
   caddy_config:
+  cloudbeaver_workspace:

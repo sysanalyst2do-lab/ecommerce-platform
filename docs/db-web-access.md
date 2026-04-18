@@ -34,6 +34,7 @@ docker compose up -d --build cloudbeaver caddy
 4. Войди под админом CloudBeaver:
    - логин: `CLOUDBEAVER_ADMIN_NAME`
    - пароль: `CLOUDBEAVER_ADMIN_PASSWORD`
+   - Важно: `ecom_tech_ro` не является пользователем CloudBeaver UI, это SQL-пользователь БД.
 5. Создай подключение PostgreSQL:
    - Host: `db`
    - Port: `5432`
@@ -41,6 +42,24 @@ docker compose up -d --build cloudbeaver caddy
    - User: `ecom_tech_ro`
    - Password: значение `TECH_RO_PASSWORD`
 6. Сохрани подключение как `Ecommerce (read-only)`.
+
+## Почему не пускает с техучеткой
+
+Если ты вводишь `ecom_tech_ro` на экране логина CloudBeaver, вход не пройдет.
+
+`ecom_tech_ro` используется только внутри подключения к PostgreSQL (в шаге 5), а не для входа в сам веб-интерфейс.
+
+## Если сменили пароль в `.env`, а вход не работает
+
+`db/init-users.sh` выполняется только при первом создании `pgdata`.
+Если ты поменял `TECH_RO_PASSWORD`/`TECH_ADMIN_PASSWORD` в уже поднятой БД, нужно синхронизировать роли вручную:
+
+```bash
+chmod +x db/sync-tech-users.sh
+./db/sync-tech-users.sh
+```
+
+После этого проверь подключение в CloudBeaver еще раз.
 
 ## Смена basic auth перед production
 

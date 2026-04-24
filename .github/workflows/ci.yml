@@ -90,10 +90,10 @@ jobs:
         run: |
           MESSAGE=$(cat <<EOF
           ✅ Tests passed
-          **repo**: ${{ github.repository }}
-          **branch**: ${{ github.ref_name }}
-          **commit**: ${{ github.sha }}
-          **run**: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          **repo** : ${{ github.repository }}
+          **branch** : ${{ github.ref_name }}
+          **commit** : ${{ github.sha }}
+          **run** : ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           EOF
           )
           curl -sS -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \

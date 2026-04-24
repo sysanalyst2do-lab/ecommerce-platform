@@ -1,4 +1,4 @@
-# C2: Как могла бы выглядеть MSA-архитектура
+# Landscape/C1/C2: Как могла бы выглядеть MSA-архитектура
 
 Учебный пример того, как e-commerce система может быть реализована в стиле **MSA (Microservices Architecture)** по тем же базовым принципам: единая точка входа, явные bounded contexts, независимые сервисы и их хранилища.
 
@@ -8,6 +8,81 @@
 - Набор независимых сервисов по доменам: `Orders`, `Payments`, `Inventory`, `Shipping`, `Customers`.
 - У каждого сервиса своя БД (`database-per-service`).
 - Интеграция между сервисами: синхронно через API и/или асинхронно через брокер событий.
+
+## C4-PlantUML (System Landscape / Company)
+
+```plantuml
+@startuml
+!includeurl https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+LAYOUT_WITH_LEGEND()
+LAYOUT_LEFT_RIGHT()
+
+title System Landscape: ИТ-ландшафт компании (фокус на e-commerce)
+
+Person(Customer, "Покупатель", "Покупает товары в цифровых каналах")
+Person(Operator, "Оператор", "Поддержка клиентов и обработка исключений")
+Person(FinanceUser, "Финансы", "Сверка платежей и отчетность")
+
+System_Boundary(Company, "Компания") {
+  System(EcomPlatform, "E-commerce Platform (MSA)", "Заказы, платежи, остатки, доставка")
+  System(CrmSystem, "CRM", "Профили клиентов, маркетинговые кампании, обращения")
+  System(ErpWmsSystem, "ERP/WMS", "Учет товаров, склад и закупки")
+  System(BiDwhSystem, "BI/DWH", "Отчеты, витрины, аналитика")
+  System(PimSystem, "PIM/Catalog", "Карточки товаров, атрибуты, контент")
+}
+
+System_Ext(PaymentProvider, "Payment Provider", "Эквайринг и антифрод")
+System_Ext(LogisticsProvider, "Logistics Provider", "Создание доставок и трекинг")
+System_Ext(NotificationService, "Notification Service", "Email/SMS/push провайдер")
+System_Ext(Marketplaces, "Marketplaces", "Внешние витрины/каналы продаж")
+
+Rel(Customer, EcomPlatform, "Выбор товаров, checkout, трекинг", "HTTPS")
+Rel(Operator, EcomPlatform, "Обработка заказов и обращений", "HTTPS")
+Rel(FinanceUser, BiDwhSystem, "Потребляет отчеты", "BI")
+
+Rel(EcomPlatform, CrmSystem, "Передает данные заказов и клиента", "API/events")
+Rel(CrmSystem, EcomPlatform, "Возвращает сегменты/кампании", "API")
+Rel(EcomPlatform, ErpWmsSystem, "Синхронизация остатков и статусов", "API/events")
+Rel(EcomPlatform, PimSystem, "Получает каталог и цены", "API/events")
+Rel(EcomPlatform, BiDwhSystem, "Публикует факты продаж/события", "Batch/stream")
+
+Rel(EcomPlatform, PaymentProvider, "Инициирует и подтверждает оплату", "HTTPS/API")
+Rel(EcomPlatform, LogisticsProvider, "Создает отправления и получает статусы", "HTTPS/API")
+Rel(EcomPlatform, NotificationService, "Транзакционные уведомления", "API")
+Rel(EcomPlatform, Marketplaces, "Импорт/экспорт заказов и остатков", "API")
+
+@enduml
+```
+
+## C4-PlantUML (System Context / C1)
+
+```plantuml
+@startuml
+!includeurl https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+LAYOUT_LEFT_RIGHT()
+
+title C1 (MSA): Контекст e-commerce платформы
+
+Person(Customer, "Покупатель", "Ищет товары, оформляет и отслеживает заказ")
+Person(Operator, "Оператор магазина", "Контролирует заказы и отгрузки")
+
+System(SystemEcom, "E-commerce Platform (MSA)", "Платформа заказов, платежей, остатков и доставки")
+
+System_Ext(PaymentProvider, "Payment Provider", "Внешний провайдер платежей")
+System_Ext(LogisticsProvider, "Logistics Provider", "Служба доставки/трекинга")
+System_Ext(ERP, "ERP/WMS", "Учет и складской контур")
+System_Ext(NotificationService, "Notification Service", "Email/SMS/push уведомления")
+
+Rel(Customer, SystemEcom, "Оформляет заказ, оплачивает, отслеживает статус", "HTTPS")
+Rel(Operator, SystemEcom, "Управляет заказами и обработкой", "HTTPS")
+
+Rel(SystemEcom, PaymentProvider, "Инициирует/подтверждает оплату", "HTTPS/API")
+Rel(SystemEcom, LogisticsProvider, "Создает отгрузки и получает статусы", "HTTPS/API")
+Rel(SystemEcom, ERP, "Синхронизирует остатки и товарные данные", "API/events")
+Rel(SystemEcom, NotificationService, "Отправляет клиентские уведомления", "API/events")
+
+@enduml
+```
 
 ## C4-PlantUML (Container / C2)
 

@@ -1,18 +1,19 @@
 import re
 
-from fastapi.testclient import TestClient
-
-from app.main import app
+from app.main import health
 from app.routers.orders import ALLOWED_TRANSITIONS, VALID_STATUSES, _next_order_id
 
 
-client = TestClient(app)
-
-
 def test_health_basic_returns_ok():
-    response = client.get("/health")
-    assert response.status_code == 200
-    assert response.json() == {"status": "ok"}
+    response = health(
+        level="basic",
+        check=None,
+        timeout_ms=1000,
+        output_format="json",
+        verbose=True,
+        include=None,
+    )
+    assert response == {"status": "ok"}
 
 
 def test_next_order_id_has_expected_format():

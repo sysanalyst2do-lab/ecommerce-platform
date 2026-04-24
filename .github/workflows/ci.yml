@@ -17,9 +17,17 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
+          MESSAGE=$(cat <<EOF
+          🚀 CI started
+          repo: ${{ github.repository }}
+          branch: ${{ github.ref_name }}
+          commit: ${{ github.sha }}
+          run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          EOF
+          )
           curl -sS -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
             --data-urlencode "chat_id=${TELEGRAM_CHAT_ID}" \
-            --data-urlencode "text=🚀 CI started%0Arepo: ${{ github.repository }}%0Abranch: ${{ github.ref_name }}%0Acommit: ${{ github.sha }}%0Arun: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            --data-urlencode "text=${MESSAGE}"
 
   backend_tests:
     runs-on: ubuntu-latest
@@ -78,9 +86,17 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
+          MESSAGE=$(cat <<EOF
+          ✅ Tests passed
+          repo: ${{ github.repository }}
+          branch: ${{ github.ref_name }}
+          commit: ${{ github.sha }}
+          run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          EOF
+          )
           curl -sS -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
             --data-urlencode "chat_id=${TELEGRAM_CHAT_ID}" \
-            --data-urlencode "text=✅ Tests passed%0Arepo: ${{ github.repository }}%0Abranch: ${{ github.ref_name }}%0Acommit: ${{ github.sha }}%0Arun: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            --data-urlencode "text=${MESSAGE}"
 
   notify_failure:
     if: always() && github.event_name == 'push'
@@ -93,6 +109,14 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
+          MESSAGE=$(cat <<EOF
+          ❌ CI failed
+          repo: ${{ github.repository }}
+          branch: ${{ github.ref_name }}
+          commit: ${{ github.sha }}
+          run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          EOF
+          )
           curl -sS -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
             --data-urlencode "chat_id=${TELEGRAM_CHAT_ID}" \
-            --data-urlencode "text=❌ CI failed%0Arepo: ${{ github.repository }}%0Abranch: ${{ github.ref_name }}%0Acommit: ${{ github.sha }}%0Arun: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            --data-urlencode "text=${MESSAGE}"

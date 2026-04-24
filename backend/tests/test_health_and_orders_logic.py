@@ -1,5 +1,8 @@
 import re
+import sys
+from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from app.main import health
 from app.routers.orders import ALLOWED_TRANSITIONS, VALID_STATUSES, _next_order_id
 

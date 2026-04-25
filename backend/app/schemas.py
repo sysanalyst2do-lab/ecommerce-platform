@@ -120,3 +120,36 @@ class StatusUpdated(BaseModel):
 class ErrorResponse(BaseModel):
     error: str
     message: str
+
+
+# ---------- Auth (JWT demo) ----------
+
+class AuthLoginIn(BaseModel):
+    username: str
+    password: str
+
+
+class AuthTokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    expires_in: int
+    refresh_token: str
+    refresh_expires_in: int
+
+
+class AuthRefreshIn(BaseModel):
+    refresh_token: str
+
+
+class AuthMeResponse(BaseModel):
+    sub: str
+    role: str
+    exp: int
+
+
+class AuthLogoutIn(BaseModel):
+    refresh_token: str
+
+
+class AuthMessageOut(BaseModel):
+    message: str

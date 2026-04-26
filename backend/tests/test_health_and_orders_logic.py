@@ -1,0 +1,31 @@
+import re
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from app.main import health
+from app.routers.orders import ALLOWED_TRANSITIONS, VALID_STATUSES, _next_order_id
+
+
+def test_health_basic_returns_ok():
+    response = health(
+        level="basic",
+        check=None,
+        timeout_ms=1000,
+        output_format="json",
+        verbose=True,
+        include=None,
+    )
+    assert response == {"status": "ok"}
+
+
+def test_next_order_id_has_expected_format():
+    order_id = _next_order_id()
+    assert re.match(r"^ORD-\d{4}-[A-F0-9]{4}$", order_id)
+
+
+def test_status_transitions_reference_only_known_statuses():
+    assert set(ALLOWED_TRANSITIONS.keys()) == VALID_STATUSES
+    for source, destinations in ALLOWED_TRANSITIONS.items():
+        assert source in VALID_STATUSES
+        assert destinations.issubset(VALID_STATUSES)

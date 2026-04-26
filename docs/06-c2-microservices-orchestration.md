@@ -7,8 +7,8 @@
 
 - `Order Orchestrator` принимает команду "создать заказ".
 - Оркестратор последовательно вызывает/командует `Payment`, `Inventory`, `Shipping`.
-- Сервисы отвечают статусами и событиями, но общий сценарий хранится в оркестраторе.
-- Kafka используется как транспорт команд/результатов и для интеграционных событий.
+- Сервисы отвечают синхронными ответами, а общий сценарий хранится в оркестраторе.
+- Kafka используется только для внешних интеграционных событий.
 
 ## C4-PlantUML (Container / C2)
 
@@ -20,9 +20,10 @@ skinparam ranksep 80
 
 title C2 (Orchestration): E-commerce с центральным оркестратором
 LAYOUT_LEFT_RIGHT()
+AddRelTag("orch_cmd", $lineColor="green", $textColor="green")
 
 Person(Customer, "Покупатель", "Оформляет заказ")
-SystemQueue_Ext(KAFKA, "Kafka Broker", "Commands/events transport")
+SystemQueue_Ext(KAFKA, "Kafka Broker", "Integration events transport")
 
 System_Boundary(ECOM, "E-commerce Platform") {
   Container(ApiGateway, "API Gateway", "REST API", "Входная точка для клиента")
@@ -35,33 +36,38 @@ System_Boundary(ECOM, "E-commerce Platform") {
 
   ContainerDb(OrderDb, "Order DB", "PostgreSQL", "Заказы")
   ContainerDb(OrchDb, "Orchestrator DB", "PostgreSQL", "Состояния саг и шагов")
+  ContainerDb(PaymentDb, "Payment DB", "PostgreSQL", "Платежи")
+  ContainerDb(InventoryDb, "Inventory DB", "PostgreSQL", "Остатки и резервы")
+  ContainerDb(ShippingDb, "Shipping DB", "PostgreSQL", "Отгрузки")
 
   Lay_L(OrderDb, OrderService)
   Lay_L(OrchDb, Orchestrator)
+  Lay_L(PaymentDb, PaymentService)
+  Lay_L(InventoryDb, InventoryService)
+  Lay_L(ShippingDb, ShippingService)
+  Lay_L(OrchDb, ApiGateway)
 }
 
 Rel(Customer, ApiGateway, "Оформляет заказ", "HTTPS/JSON")
 Rel(ApiGateway, Orchestrator, "POST /checkout", "REST")
 
-Rel(Orchestrator, OrderService, "CreateOrder command", "REST or Kafka command")
+Rel(Orchestrator, OrderService, "CreateOrder", "HTTP/gRPC", $tags="orch_cmd")
 Rel(OrderService, OrderDb, "Сохраняет заказ", "SQL")
-Rel(OrderService, KAFKA, "OrderCreated result", "orders.events.v1")
-Rel(KAFKA, Orchestrator, "Consume result", "orders.events.v1")
 
-Rel(Orchestrator, PaymentService, "AuthorizePayment command", "Kafka commands")
-Rel(PaymentService, KAFKA, "PaymentSucceeded/Failed", "payments.events.v1")
-Rel(KAFKA, Orchestrator, "Consume result", "payments.events.v1")
+Rel(Orchestrator, PaymentService, "AuthorizePayment", "HTTP/gRPC", $tags="orch_cmd")
+Rel(PaymentService, Orchestrator, "Payment result", "HTTP/gRPC")
+Rel(PaymentService, PaymentDb, "Сохраняет платеж", "SQL")
 
-Rel(Orchestrator, InventoryService, "ReserveStock command", "Kafka commands")
-Rel(InventoryService, KAFKA, "StockReserved/Failed", "inventory.events.v1")
-Rel(KAFKA, Orchestrator, "Consume result", "inventory.events.v1")
+Rel(Orchestrator, InventoryService, "ReserveStock", "HTTP/gRPC", $tags="orch_cmd")
+Rel(InventoryService, Orchestrator, "Stock result", "HTTP/gRPC")
+Rel(InventoryService, InventoryDb, "Резервирует сток", "SQL")
 
-Rel(Orchestrator, ShippingService, "CreateShipment command", "Kafka commands")
-Rel(ShippingService, KAFKA, "ShipmentCreated/Failed", "shipping.events.v1")
-Rel(KAFKA, Orchestrator, "Consume result", "shipping.events.v1")
+Rel(Orchestrator, ShippingService, "CreateShipment", "HTTP/gRPC", $tags="orch_cmd")
+Rel(ShippingService, Orchestrator, "Shipment result", "HTTP/gRPC")
+Rel(ShippingService, ShippingDb, "Сохраняет отгрузку", "SQL")
 
 Rel(Orchestrator, OrchDb, "Хранит состояние саги", "SQL")
-Rel(Orchestrator, KAFKA, "Публикует compensating commands при ошибках", "commands topics")
+Rel(Orchestrator, KAFKA, "Публикует интеграционные события", "integration.events.v1")
 
 note right of Orchestrator
 Единая точка управления процессом:

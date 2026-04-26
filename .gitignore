@@ -6,3 +6,5 @@ node_modules/
 dist/
 .idea/
 cookies.txt
+backend/allure-results/
+backend/allure-report/

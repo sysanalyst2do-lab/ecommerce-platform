@@ -45,7 +45,26 @@ jobs:
             git pull --ff-only origin main
             docker compose up -d --build
             docker compose ps
-            curl -fsS "http://localhost:8000/health" > /dev/null
+            # Backend may need a few seconds after recreate.
+            ATTEMPTS=30
+            SLEEP_SEC=2
+            for i in $(seq 1 "$ATTEMPTS"); do
+              if curl -fsS "http://localhost:8000/health" > /dev/null; then
+                echo "Healthcheck passed on attempt ${i}."
+                break
+              fi
+              echo "Healthcheck not ready yet (${i}/${ATTEMPTS}), waiting ${SLEEP_SEC}s..."
+              sleep "$SLEEP_SEC"
+              if [ "$i" -eq "$ATTEMPTS" ]; then
+                echo "Healthcheck failed after ${ATTEMPTS} attempts."
+                docker compose logs --tail=100 backend || true
+                exit 1
+              fi
+            done
+
+            # Second smoke-check: make sure business endpoint is alive too.
+            curl -fsS "http://localhost:8000/api/v1/orders" > /dev/null
+            echo "Smoke-check for /api/v1/orders passed."
 
       - name: Telegram - deploy success
         if: success()

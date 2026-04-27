@@ -1,0 +1,25 @@
+@startuml
+skin rose
+title Вариант 1: HTTP -> Backend -> SMTP (MailHog)
+
+actor User as "Пользователь"
+participant Client as "curl/Postman"
+participant API as "Backend API\n/api/v1/mail/test"
+participant SMTP as "MailHog SMTP\n:1025"
+participant UI as "MailHog Web UI\n:8025"
+
+User -> Client: Запускает POST /api/v1/mail/test
+Client -> API: HTTP POST JSON (to, subject, body)
+
+API -> API: Валидирует JSON
+API -> SMTP: SMTP connect + send_message()
+SMTP --> API: 250 OK (mail queued)
+
+API --> Client: 200 OK + {message: mail queued}
+
+User -> UI: Открывает UI MailHog
+UI -> SMTP: Читает список писем
+SMTP --> UI: Письмо доступно
+UI --> User: Показывает письмо
+
+@enduml

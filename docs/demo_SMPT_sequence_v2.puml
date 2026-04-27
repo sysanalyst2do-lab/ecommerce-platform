@@ -1,0 +1,35 @@
+@startuml
+skin rose
+title Вариант 2: Прямой SMTP-диалог с MailHog
+
+actor User as "Пользователь"
+participant SMTPClient as "SMTP-клиент\n(swaks/telnet/nc)"
+participant SMTP as "MailHog SMTP\n:1025"
+participant UI as "MailHog Web UI\n:8025"
+
+User -> SMTPClient: Запускает SMTP-сессию
+SMTPClient -> SMTP: TCP connect :1025
+SMTP --> SMTPClient: 220 Service ready
+
+SMTPClient -> SMTP: EHLO demo.local
+SMTP --> SMTPClient: 250 OK (+ capabilities)
+
+SMTPClient -> SMTP: MAIL FROM:<demo@local>
+SMTP --> SMTPClient: 250 OK
+
+SMTPClient -> SMTP: RCPT TO:<student@example.com>
+SMTP --> SMTPClient: 250 OK
+
+SMTPClient -> SMTP: DATA
+SMTP --> SMTPClient: 354 End data with <CRLF>.<CRLF>
+
+SMTPClient -> SMTP: Subject/Body + "." (end)
+SMTP --> SMTPClient: 250 Queued
+
+SMTPClient -> SMTP: QUIT
+SMTP --> SMTPClient: 221 Bye
+
+User -> UI: Открывает MailHog UI
+UI --> User: Видит отправленное письмо
+
+@enduml

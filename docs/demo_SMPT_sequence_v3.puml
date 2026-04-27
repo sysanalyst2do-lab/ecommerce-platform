@@ -1,0 +1,55 @@
+@startuml
+skin rose
+title SMTP demo via Telnet (command/response)
+
+autonumber
+actor User as "Пользователь"
+participant Telnet as "Telnet client"
+participant SMTP as "MailHog SMTP :1025"
+participant UI as "MailHog UI :8025"
+
+User -> Telnet: telnet localhost 1025
+Telnet -> SMTP: TCP connect
+SMTP --> Telnet: 220 mailhog ESMTP ready
+
+User -> Telnet: EHLO demo.local + Enter
+Telnet -> SMTP: EHLO demo.local
+SMTP --> Telnet: 250-mailhog
+SMTP --> Telnet: 250-PIPELINING
+SMTP --> Telnet: 250 AUTH PLAIN LOGIN
+
+User -> Telnet: MAIL FROM:<demo@local.test> + Enter
+Telnet -> SMTP: MAIL FROM:<demo@local.test>
+SMTP --> Telnet: 250 Sender ok
+
+User -> Telnet: RCPT TO:<student@example.com> + Enter
+Telnet -> SMTP: RCPT TO:<student@example.com>
+SMTP --> Telnet: 250 Recipient ok
+
+User -> Telnet: DATA + Enter
+Telnet -> SMTP: DATA
+SMTP --> Telnet: 354 End data with <CRLF>.<CRLF>
+
+User -> Telnet: Subject: SMTP demo via telnet + Enter
+Telnet -> SMTP: Subject: SMTP demo via telnet
+
+User -> Telnet: (пустая строка) + Enter
+Telnet -> SMTP: <empty line>
+
+User -> Telnet: Hello from raw SMTP over telnet. + Enter
+Telnet -> SMTP: Hello from raw SMTP over telnet.
+
+User -> Telnet: . + Enter
+Telnet -> SMTP: .
+SMTP --> Telnet: 250 Message queued as <id>
+
+User -> Telnet: QUIT + Enter
+Telnet -> SMTP: QUIT
+SMTP --> Telnet: 221 Bye
+
+User -> UI: Открывает http://localhost:8025
+UI -> SMTP: Запрос списка писем
+SMTP --> UI: Новое письмо
+UI --> User: Письмо отображено
+
+@enduml

@@ -153,3 +153,17 @@ class AuthLogoutIn(BaseModel):
 
 class AuthMessageOut(BaseModel):
     message: str
+
+
+# ---------- SMTP demo ----------
+
+class MailTestIn(BaseModel):
+    to: str
+    subject: str = "SMTP demo message"
+    body: str = "Hello from ecommerce-platform SMTP demo."
+
+
+class MailTestOut(BaseModel):
+    message: str
+    smtp_host: str
+    smtp_port: int

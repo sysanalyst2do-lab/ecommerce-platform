@@ -13,7 +13,7 @@ from fastapi.responses import FileResponse, PlainTextResponse
 from sqlalchemy import text
 
 from .database import SessionLocal
-from .routers import auth, cookies, orders
+from .routers import auth, cookies, mail, orders
 
 logger = logging.getLogger("uvicorn.error")
 if logger.level > logging.INFO:
@@ -111,6 +111,7 @@ async def log_http_requests(request: Request, call_next):
 app.include_router(orders.router)
 app.include_router(cookies.router)
 app.include_router(auth.router)
+app.include_router(mail.router)
 
 
 @app.get("/openapi.yaml", include_in_schema=False)

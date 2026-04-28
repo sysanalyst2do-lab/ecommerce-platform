@@ -19,7 +19,7 @@ function AppLayout() {
           <img className="header-cat" src={devStandImage} alt="Dev stand cat" />
         </div>
         <a href="/" className="brand-block logo-centered">
-          <span className="brand-title">Itea Librery</span>
+          <span className="brand-title">Itea Library</span>
           <span className="brand-subtitle">E-commerce Orders</span>
         </a>
         <div className="header-right">
